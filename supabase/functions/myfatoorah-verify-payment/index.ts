@@ -88,6 +88,16 @@ Deno.serve(async (req: Request) => {
     // Admin to see the last attempt even on a failed/cancelled payment.
     await supabase.from('orders').update({ stripe_payment_intent_id: paymentId }).eq('id', order.id)
 
+    // DIAGNOSTIC (live testing): log the full raw MyFatoorah response once,
+    // regardless of outcome. getPaymentDetails()'s field mapping
+    // (invoiceValue/currency/customerReference) was assembled from
+    // documentation, never confirmed against a real response — exactly
+    // like the CustomerReference request-shape bug already found and
+    // fixed. If a mismatch below is wrong, this line shows the actual
+    // field names MyFatoorah returns so the mapping can be corrected
+    // precisely instead of guessed again. Safe to remove once confirmed.
+    console.log('MyFatoorah raw payment details:', JSON.stringify(details.raw))
+
     const referenceMatches = !details.customerReference || details.customerReference === order.id
     const amountMatches =
       Number.isFinite(details.invoiceValue) && Math.abs(details.invoiceValue - Number(order.total)) < 0.01
