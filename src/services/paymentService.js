@@ -14,6 +14,28 @@
 
 import { supabase } from '../lib/supabaseClient'
 
+// FIX (live testing): supabase-js's functions.invoke() sets `data: null`
+// whenever the Edge Function returns a non-2xx status — the actual JSON
+// body the function sent (our friendly Arabic message + error code) is
+// only reachable via `error.context`, a raw Response object, and must be
+// parsed separately. Reading `data?.message` (as this file used to do)
+// always fails silently and falls back to the generic default text,
+// hiding the real reason for every failure. This helper fixes that for
+// both functions below.
+async function readInvokeError(error, fallbackMessage) {
+  let body = null
+  try {
+    body = await error?.context?.json()
+  } catch {
+    // Response body wasn't JSON (or already consumed) — fall through to
+    // the generic message below rather than throwing here.
+  }
+  const message = body?.message || fallbackMessage
+  const err = new Error(message)
+  err.code = body?.error || 'invoke_failed'
+  return err
+}
+
 /**
  * Creates (or re-creates, for a retry) a MyFatoorah payment for an
  * existing order and returns the URL to redirect the browser to.
@@ -31,10 +53,7 @@ export async function createMyFatoorahPayment(orderId) {
   })
 
   if (error) {
-    const message = data?.message || 'تعذر تجهيز الدفع، برجاء المحاولة مرة أخرى'
-    const err = new Error(message)
-    err.code = data?.error || 'payment_creation_failed'
-    throw err
+    throw await readInvokeError(error, 'تعذر تجهيز الدفع، برجاء المحاولة مرة أخرى')
   }
 
   return data
@@ -56,10 +75,7 @@ export async function verifyMyFatoorahPayment(orderId, paymentId) {
   })
 
   if (error) {
-    const message = data?.message || 'تعذر التحقق من حالة الدفع'
-    const err = new Error(message)
-    err.code = data?.error || 'verification_failed'
-    throw err
+    throw await readInvokeError(error, 'تعذر التحقق من حالة الدفع')
   }
 
   return data
