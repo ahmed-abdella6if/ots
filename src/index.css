@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global RTL / Arabic typography base styles go here (Stage 2+) */
+
+html {
+  direction: rtl;
+}
