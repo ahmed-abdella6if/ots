@@ -123,19 +123,41 @@ export async function createPayment({
  * authoritative, server-to-server source of truth for a payment's status.
  * Never trust the browser's return-URL query params alone; this is what
  * actually confirms a payment.
+ *
+ * FIX (confirmed against a real live sandbox response — see the
+ * diagnostic log this was built from): this endpoint's real response
+ * shape is nothing like the flat `InvoiceId`/`InvoiceStatus`/
+ * `InvoiceValue` fields assumed before (those belong to a different,
+ * older MyFatoorah endpoint). The actual shape is nested:
+ *   { Invoice: { Id, Status, Reference, ExternalIdentifier,
+ *                UserDefinedField, ... },
+ *     Transaction: { Id, Status, PaymentId, ... },
+ *     Customer: { Name, Mobile, Email },
+ *     Amount: { BaseCurrency, ValueInBaseCurrency, ReceivableAmount, ... } }
+ * `Amount.ValueInBaseCurrency` is the full customer-charged amount (what
+ * must match order.total) — NOT `Amount.ReceivableAmount`, which is net
+ * of MyFatoorah's own service charge/VAT and will legitimately be lower.
+ * Neither `Invoice.ExternalIdentifier` nor `Invoice.UserDefinedField` came
+ * back populated in the real response even though `Customer.Reference`
+ * was sent at request time — MyFatoorah does not appear to echo it back
+ * on this endpoint, so `customerReference` below may legitimately be
+ * empty. The caller (myfatoorah-verify-payment) already treats an empty
+ * customerReference as "skip this check" rather than a failure, so this
+ * doesn't weaken anything that was actually working — it just means the
+ * amount+order-id binding is the real security boundary here, not this
+ * reference field.
  */
 export async function getPaymentDetails(paymentId: string) {
   const json = await myFatoorahRequest(`/v3/payments/${encodeURIComponent(paymentId)}`, 'GET')
   const data = json.Data ?? {}
 
   return {
-    invoiceId: String(data.InvoiceId ?? ''),
-    invoiceStatus: data.InvoiceStatus as string | undefined, // 'PAID' | 'PENDING' | ...
-    invoiceValue: Number(data.InvoiceValue ?? data.InvoiceValueInBaseCurrency ?? NaN),
-    currency: (data.InvoiceDisplayCurrency || data.BaseCurrency || data.CurrencyIso) as
-      | string
-      | undefined,
-    customerReference: data.CustomerReference as string | undefined,
+    invoiceId: String(data.Invoice?.Id ?? ''),
+    invoiceStatus: data.Invoice?.Status as string | undefined, // 'PAID' | 'PENDING' | ...
+    invoiceValue: Number(data.Amount?.ValueInBaseCurrency ?? NaN),
+    currency: (data.Amount?.BaseCurrency || data.Amount?.DisplayCurrency) as string | undefined,
+    customerReference: (data.Invoice?.ExternalIdentifier || data.Invoice?.UserDefinedField ||
+      undefined) as string | undefined,
     raw: data,
   }
 }
