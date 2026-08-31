@@ -396,12 +396,36 @@ export async function validateCartForCheckout(cartItems) {
  * @param {{ defaultShippingCost?: number, freeShippingEnabled?: boolean, freeShippingMinOrderAmount?: number }|null} settings
  * @returns {number}
  */
-export function calculateShippingCost(subtotal, settings) {
+// STAGE 28 — this store's shipping rule is now: 0.850 KWD normally, FREE
+// once an order's total item quantity reaches a full dozen (12 pieces).
+// This is evaluated as an ADDITIONAL, always-active path alongside the
+// existing Stage 21 admin-configurable monetary threshold
+// (freeShippingEnabled + freeShippingMinOrderAmount) — NOT a replacement.
+// Reasoning (reported per this stage's brief before changing anything):
+// silently repurposing or removing the Stage 21 fields would leave the
+// admin's existing "تفعيل الشحن المجاني" toggle and threshold either dead
+// (still shown, no longer doing anything) or reinterpreted as something
+// the admin never configured — both are the "ambiguous behavior" this
+// stage's brief explicitly says to avoid. Instead, shipping is free if
+// EITHER condition is met: 12+ total pieces (this stage's fixed business
+// rule, not admin-configurable), OR the existing subtotal-threshold rule
+// if the admin still has it enabled. Either one is sufficient on its own.
+//
+// totalQuantity MUST come from the same server-trusted item list used for
+// subtotal (validated cart items at checkout preview, or the validated
+// items createOrder() already received) — never a client-supplied count.
+export const FREE_SHIPPING_MIN_QUANTITY = 12
+
+export function calculateShippingCost(subtotal, settings, totalQuantity) {
   const defaultCost = Math.round((Number(settings?.defaultShippingCost) || 0) * 100) / 100
   const freeEnabled = Boolean(settings?.freeShippingEnabled)
   const threshold = Math.round((Number(settings?.freeShippingMinOrderAmount) || 0) * 100) / 100
   const roundedSubtotal = Math.round((Number(subtotal) || 0) * 100) / 100
+  const quantity = Math.max(0, Math.floor(Number(totalQuantity) || 0))
 
+  if (quantity >= FREE_SHIPPING_MIN_QUANTITY) {
+    return 0
+  }
   if (freeEnabled && roundedSubtotal >= threshold) {
     return 0
   }
@@ -482,10 +506,16 @@ export async function createOrder({ customer, customerId, items, discount }) {
   // Falls back to 0 only if store_settings can't be read at all, matching
   // the pre-Stage-20 default and keeping order creation from hard-failing
   // on a transient settings-read error.
+  // STAGE 28 — total quantity for the 12-piece free-shipping rule comes
+  // from this same server-trusted `items` list (already validated by
+  // validateCartForCheckout before createOrder() is ever called) — never
+  // from a client-supplied count.
+  const totalQuantity = items.reduce((sum, i) => sum + (Number(i.quantity) || 0), 0)
+
   let shipping = 0
   try {
     const settings = await getStoreSettings()
-    shipping = calculateShippingCost(subtotal, settings)
+    shipping = calculateShippingCost(subtotal, settings, totalQuantity)
   } catch (err) {
     console.error('Failed to read shipping settings, defaulting to 0:', err.message)
   }

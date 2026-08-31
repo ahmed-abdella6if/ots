@@ -19,6 +19,7 @@ import { ImageOff, Minus, Plus, Check, ChevronLeft } from 'lucide-react'
 import NotFoundPage from './NotFoundPage'
 import { useProductPage } from '../hooks/useProducts'
 import { useCart } from '../hooks/useCart'
+import { useLanguage } from '../hooks/useLanguage'
 import { formatKWD } from '../utils/formatPrice'
 
 const DEFAULT_MAX_QUANTITY = 10
@@ -31,6 +32,7 @@ export default function ProductPage() {
   const { slug } = useParams()
   const { product, loading, error, notFound } = useProductPage(slug)
   const { addItem } = useCart()
+  const { t, dir } = useLanguage()
 
   const [selectedColorId, setSelectedColorId] = useState(null)
   const [selectedSizeId, setSelectedSizeId] = useState(null)
@@ -135,7 +137,7 @@ export default function ProductPage() {
   if (error || !product) {
     return (
       <div className="max-w-md mx-auto px-4 py-24 text-center">
-        <p className="text-sm text-red-500">حدث خطأ أثناء تحميل المنتج</p>
+        <p className="text-sm text-red-500">{t('product.loadError')}</p>
       </div>
     )
   }
@@ -185,7 +187,7 @@ export default function ProductPage() {
       {product.category && (
         <nav className="flex items-center gap-1.5 text-xs text-gray-400 mb-6">
           <Link to="/" className="hover:text-brand-gold transition-colors">
-            الرئيسية
+            {t('nav.home')}
           </Link>
           <ChevronLeft size={12} />
           <Link to={`/category/${product.category.slug}`} className="hover:text-brand-gold transition-colors">
@@ -208,13 +210,13 @@ export default function ProductPage() {
               </div>
             )}
             {product.isBestseller && (
-              <span className="absolute top-3 right-3 bg-brand text-white text-xs font-medium px-2.5 py-1 rounded-full">
-                الاكثر مبيعا
+              <span className={`absolute top-3 ${dir === 'rtl' ? 'right-3' : 'left-3'} bg-brand text-white text-xs font-medium px-2.5 py-1 rounded-full`}>
+                {t('home.bestSellers')}
               </span>
             )}
             {product.hasDiscount && (
-              <span className="absolute top-3 left-3 bg-red-500 text-white text-xs font-medium px-2.5 py-1 rounded-full">
-                خصم
+              <span className={`absolute top-3 ${dir === 'rtl' ? 'left-3' : 'right-3'} bg-red-500 text-white text-xs font-medium px-2.5 py-1 rounded-full`}>
+                {t('home.discountPrefix')}
               </span>
             )}
           </div>
@@ -228,7 +230,7 @@ export default function ProductPage() {
                   className={`w-16 h-20 rounded-lg overflow-hidden shrink-0 border-2 transition-colors ${
                     activeImage?.id === img.id ? 'border-brand-gold' : 'border-transparent'
                   }`}
-                  aria-label="عرض هذه الصورة"
+                  aria-label={t('product.viewImage')}
                 >
                   <img src={img.imageUrl} alt="" className="w-full h-full object-cover" />
                 </button>
@@ -258,7 +260,7 @@ export default function ProductPage() {
 
           {product.material && (
             <p className="text-sm text-gray-500 mt-3">
-              <span className="text-gray-400">الخامة: </span>
+              <span className="text-gray-400">{t('product.material')}: </span>
               {product.material}
             </p>
           )}
@@ -266,7 +268,7 @@ export default function ProductPage() {
           {/* الألوان */}
           {hasColors && (
             <div className="mt-6">
-              <p className="text-sm font-medium text-gray-800 mb-2.5">اللون</p>
+              <p className="text-sm font-medium text-gray-800 mb-2.5">{t('product.color')}</p>
               <div className="flex flex-wrap gap-2.5">
                 {product.colors.map((color) => {
                   const available = colorAvailable(color.id)
@@ -301,7 +303,7 @@ export default function ProductPage() {
           {/* المقاسات */}
           {hasSizes && (
             <div className="mt-6">
-              <p className="text-sm font-medium text-gray-800 mb-2.5">المقاس</p>
+              <p className="text-sm font-medium text-gray-800 mb-2.5">{t('product.size')}</p>
               <div className="flex flex-wrap gap-2">
                 {product.sizes.map((size) => {
                   const available = sizeAvailable(size.id)
@@ -327,20 +329,20 @@ export default function ProductPage() {
           {hasVariants && selectedColorId && selectedSizeId && (
             <p className={`text-xs mt-4 ${isOutOfStock || noMatchingVariant ? 'text-red-500' : 'text-green-600'}`}>
               {isOutOfStock || noMatchingVariant
-                ? 'غير متوفر حاليا'
-                : `متوفر (${selectedVariant.stockQuantity} قطعة)`}
+                ? t('product.outOfStock')
+                : t('product.availableCount', { count: selectedVariant.stockQuantity })}
             </p>
           )}
 
           {/* الكمية */}
           <div className="mt-6">
-            <p className="text-sm font-medium text-gray-800 mb-2.5">الكمية</p>
+            <p className="text-sm font-medium text-gray-800 mb-2.5">{t('product.quantity')}</p>
             <div className="flex items-center border border-gray-200 rounded-lg w-fit">
               <button
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                 disabled={quantity <= 1}
                 className="p-2.5 text-gray-600 hover:text-brand-gold disabled:opacity-30 transition-colors"
-                aria-label="تقليل الكمية"
+                aria-label={t('cart.decreaseQty')}
               >
                 <Minus size={14} />
               </button>
@@ -349,7 +351,7 @@ export default function ProductPage() {
                 onClick={() => setQuantity((q) => Math.min(maxQuantity || DEFAULT_MAX_QUANTITY, q + 1))}
                 disabled={quantity >= (maxQuantity || DEFAULT_MAX_QUANTITY)}
                 className="p-2.5 text-gray-600 hover:text-brand-gold disabled:opacity-30 transition-colors"
-                aria-label="زيادة الكمية"
+                aria-label={t('cart.increaseQty')}
               >
                 <Plus size={14} />
               </button>
@@ -363,10 +365,10 @@ export default function ProductPage() {
             className="w-full mt-8 bg-brand text-white rounded-xl px-6 py-3.5 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {justAdded
-              ? 'تمت الإضافة الى السلة'
+              ? t('product.addedToCart')
               : isOutOfStock || noMatchingVariant
-              ? 'غير متوفر حاليا'
-              : 'اضافة الى السلة'}
+              ? t('product.outOfStock')
+              : t('product.addToCart')}
           </button>
         </div>
       </div>

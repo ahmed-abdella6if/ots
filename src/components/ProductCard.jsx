@@ -1,8 +1,15 @@
 import { Link } from 'react-router-dom'
 import { ImageOff } from 'lucide-react'
 import { formatKWD } from '../utils/formatPrice'
+import { useLanguage } from '../hooks/useLanguage'
 
 export default function ProductCard({ product }) {
+  const { t, dir } = useLanguage()
+  // STAGE 30 — bestseller/discount badges are absolutely positioned
+  // ("top-3 right-3" / "top-3 left-3"), a physical side that doesn't flip
+  // with `dir`. Swap them explicitly so they don't collide in LTR.
+  const bestsellerSideClass = dir === 'rtl' ? 'right-3' : 'left-3'
+  const discountSideClass = dir === 'rtl' ? 'left-3' : 'right-3'
   const {
     name,
     slug,
@@ -34,15 +41,15 @@ export default function ProductCard({ product }) {
 
         {/* Bestseller */}
         {isBestseller && (
-          <span className="absolute top-3 right-3 bg-brand text-white text-[11px] font-medium px-3 py-1.5 rounded-full">
-            الاكثر مبيعا
+          <span className={`absolute top-3 ${bestsellerSideClass} bg-brand text-white text-[11px] font-medium px-3 py-1.5 rounded-full`}>
+            {t('home.bestSellers')}
           </span>
         )}
 
         {/* Discount */}
         {hasDiscount && (
-          <span className="absolute top-3 left-3 bg-red-500 text-white text-[11px] font-medium px-3 py-1.5 rounded-full">
-            خصم
+          <span className={`absolute top-3 ${discountSideClass} bg-red-500 text-white text-[11px] font-medium px-3 py-1.5 rounded-full`}>
+            {t('home.discountPrefix')}
           </span>
         )}
       </div>

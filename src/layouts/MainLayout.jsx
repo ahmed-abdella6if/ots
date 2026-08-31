@@ -12,10 +12,16 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { getStoreSettings } from '../services/settingsService'
 import { getHomepageCategories } from '../services/categoryService'
+import { useLanguage } from '../hooks/useLanguage'
 
 export default function MainLayout() {
   const [storeSettings, setStoreSettings] = useState(null)
   const [categories, setCategories] = useState([])
+  // STAGE 30 — dir was previously hardcoded "rtl" here; it now follows the
+  // active language (LanguageContext also mirrors this onto <html> so
+  // elements outside MainLayout, like modals rendered via portals, stay
+  // consistent too).
+  const { dir } = useLanguage()
 
   useEffect(() => {
     let isMounted = true
@@ -38,7 +44,7 @@ export default function MainLayout() {
   }, [])
 
   return (
-    <div dir="rtl" className="min-h-screen flex flex-col">
+    <div dir={dir} className="min-h-screen flex flex-col">
       <Navbar storeSettings={storeSettings} categories={categories} />
       <main className="flex-1">
         <Outlet context={{ storeSettings, categories }} />

@@ -53,14 +53,16 @@ import {
   CANCELLED_STATUS,
 } from '../admin/pages/Orders'
 import OrderStatusTimeline from '../components/OrderStatusTimeline'
+import { useLanguage } from '../hooks/useLanguage'
 
 // Only the very first stage of the order flow is safe for a customer to
 // self-cancel — once it's "قيد التجهيز" or beyond, staff are already
 // acting on it.
 const CANCELLABLE_STATUS = 'جديد'
 
-function formatDateTime(dateStr) {
-  return new Date(dateStr).toLocaleDateString('ar-EG', {
+// STAGE 30 — date locale follows the active language (was hardcoded 'ar-EG').
+function formatDateTime(dateStr, language) {
+  return new Date(dateStr).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-GB', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -80,21 +82,22 @@ function DetailSkeleton() {
   )
 }
 
-function availabilityNote(result) {
+function availabilityNote(result, t) {
   if (!result) return null
   if (result.ok) return null
   if (result.reason === 'insufficient_stock') {
-    return `الكمية المتاحة الآن ${result.availableStock} فقط`
+    return t('order.insufficientStock', { count: result.availableStock })
   }
-  if (result.reason === 'variant_unavailable') return 'هذا الخيار (اللون/المقاس) لم يعد متوفرًا'
-  if (result.reason === 'product_unavailable') return 'هذا المنتج لم يعد متوفرًا'
-  return 'غير متاح حاليًا'
+  if (result.reason === 'variant_unavailable') return t('order.variantUnavailable')
+  if (result.reason === 'product_unavailable') return t('order.productUnavailable')
+  return t('order.currentlyUnavailable')
 }
 
 export default function MyOrderDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { addItem } = useCart()
+  const { t, dir, language } = useLanguage()
 
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -188,7 +191,7 @@ export default function MyOrderDetailPage() {
 
   async function handleCancelOrder() {
     if (!order || cancelling) return
-    if (!window.confirm('هل أنت متأكد من إلغاء هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء')) return
+    if (!window.confirm(t('order.confirmCancel'))) return
 
     setCancelling(true)
     setCancelError('')
@@ -196,10 +199,10 @@ export default function MyOrderDetailPage() {
     try {
       await cancelMyOrder(order.id)
       setOrder((prev) => (prev ? { ...prev, orderStatus: CANCELLED_STATUS } : prev))
-      setCancelSuccess('تم إلغاء طلبك بنجاح')
+      setCancelSuccess(t('order.cancelSuccess'))
     } catch (err) {
       console.error('Failed to cancel order:', err.message)
-      setCancelError('تعذر إلغاء الطلب، برجاء المحاولة مرة أخرى او التواصل معنا')
+      setCancelError(t('order.cancelFailed'))
     } finally {
       setCancelling(false)
     }
@@ -237,11 +240,11 @@ export default function MyOrderDetailPage() {
       }
 
       if (addedCount === 0) {
-        setReorderMessage('عذرًا، كل المنتجات في هذا الطلب لم تعد متاحة حاليًا')
+        setReorderMessage(t('order.reorderNoneAvailable'))
       } else if (unavailableCount > 0) {
         navigate('/cart', {
           state: {
-            notice: `تمت إضافة ${addedCount} منتج/منتجات للسلة. ${unavailableCount} غير متاح حاليًا ولم تتم إضافته`,
+            notice: t('order.reorderPartial', { added: addedCount, unavailable: unavailableCount }),
           },
         })
       } else {
@@ -256,19 +259,19 @@ export default function MyOrderDetailPage() {
 
   if (notFound || !order) {
     return (
-      <div dir="rtl" className="max-w-md mx-auto px-4 py-24 text-center">
+      <div dir={dir} className="max-w-md mx-auto px-4 py-24 text-center">
         <div className="w-16 h-16 rounded-2xl bg-brand-light flex items-center justify-center mx-auto text-brand-gold">
           <PackageSearch size={28} />
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mt-6">لم يتم العثور على الطلب</h1>
+        <h1 className="text-xl font-bold text-gray-900 mt-6">{t('order.notFound')}</h1>
         <p className="text-sm text-gray-500 mt-2">
-          تأكد من رابط الطلب، او قد يكون هذا الطلب غير مرتبط بحسابك
+          {t('order.notFoundHint')}
         </p>
         <Link
           to="/account/orders"
           className="inline-block mt-6 bg-brand text-white rounded-xl px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
         >
-          العودة لطلباتي
+          {t('order.backToMyOrders')}
         </Link>
       </div>
     )
@@ -280,13 +283,13 @@ export default function MyOrderDetailPage() {
   const canReorder = availability && [...availability.values()].some((r) => r.ok)
 
   return (
-    <div dir="rtl" className="max-w-2xl mx-auto px-4 py-10">
+    <div dir={dir} className="max-w-2xl mx-auto px-4 py-10">
       <Link
         to="/account/orders"
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-brand-gold transition-colors mb-6"
       >
-        <ChevronRight size={16} />
-        العودة لطلباتي
+        <ChevronRight size={16} className={dir === 'ltr' ? 'rotate-180' : ''} />
+        {t('order.backToMyOrders')}
       </Link>
 
       <div className="flex items-center justify-between mb-1 gap-2">
@@ -296,13 +299,13 @@ export default function MyOrderDetailPage() {
         <button
           onClick={handleCopyOrderNumber}
           className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-gold transition-colors shrink-0"
-          aria-label="نسخ رقم الطلب"
+          aria-label={t('order.copyOrderNumber')}
         >
           {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
-          {copied ? 'تم النسخ' : 'نسخ الرقم'}
+          {copied ? t('order.copied') : t('order.copyNumber')}
         </button>
       </div>
-      <p className="text-sm text-gray-500 mb-6">تم الطلب في {formatDateTime(order.createdAt)}</p>
+      <p className="text-sm text-gray-500 mb-6">{t('order.placedOn', { date: formatDateTime(order.createdAt, language) })}</p>
 
       <div className="flex items-center gap-2 mb-4">
         <StatusBadge
@@ -323,7 +326,7 @@ export default function MyOrderDetailPage() {
           className="flex items-center justify-center gap-2 bg-brand text-white rounded-xl px-4 py-3 text-sm font-medium mb-4 hover:opacity-90 transition-opacity"
         >
           <CreditCard size={16} />
-          إتمام / إعادة محاولة الدفع
+          {t('order.completeOrRetryPayment')}
         </Link>
       )}
 
@@ -338,7 +341,7 @@ export default function MyOrderDetailPage() {
           {explanation && <p className="text-sm text-gray-800">{explanation}</p>}
           {nextStep && (
             <p className="text-xs text-gray-500">
-              <span className="font-medium text-gray-600">الخطوة التالية: </span>
+              <span className="font-medium text-gray-600">{t('order.nextStep')}</span>
               {nextStep}
             </p>
           )}
@@ -366,13 +369,13 @@ export default function MyOrderDetailPage() {
           className="w-full flex items-center justify-center gap-2 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm font-medium mb-4 hover:bg-red-50 transition-colors disabled:opacity-60"
         >
           {cancelling && <Loader2 size={16} className="animate-spin" />}
-          إلغاء الطلب
+          {t('order.cancelOrder')}
         </button>
       )}
 
       {/* Shipping info */}
       <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-4">
-        <h2 className="text-sm font-bold text-gray-900 mb-3">بيانات التوصيل</h2>
+        <h2 className="text-sm font-bold text-gray-900 mb-3">{t('order.deliveryInfo')}</h2>
         <div className="space-y-1.5 text-sm text-gray-600">
           <p>{order.customerName}</p>
           <p dir="ltr" className="text-right">{order.customerPhone}</p>
@@ -386,11 +389,11 @@ export default function MyOrderDetailPage() {
 
       {/* Items */}
       <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-4">
-        <h2 className="text-sm font-bold text-gray-900 mb-4">المنتجات</h2>
+        <h2 className="text-sm font-bold text-gray-900 mb-4">{t('order.products')}</h2>
         <div className="space-y-4">
           {order.items.map((item) => {
             const result = availability?.get(item.id)
-            const note = availabilityNote(result)
+            const note = availabilityNote(result, t)
 
             return (
               <div key={item.id} className="flex gap-3">
@@ -432,23 +435,23 @@ export default function MyOrderDetailPage() {
       {/* Totals */}
       <div className="bg-white border border-gray-100 rounded-2xl p-5 space-y-2 text-sm mb-4">
         <div className="flex items-center justify-between text-gray-600">
-          <span>الإجمالي الفرعي</span>
+          <span>{t('checkout.subtotal')}</span>
           <span className="text-gray-900">{formatKWD(order.subtotal)}</span>
         </div>
         {order.discountAmount > 0 && (
           <div className="flex items-center justify-between text-brand-gold">
-            <span>الخصم{order.discountCode ? ` (${order.discountCode})` : ''}</span>
+            <span>{t('order.discount')}{order.discountCode ? ` (${order.discountCode})` : ''}</span>
             <span>- {formatKWD(order.discountAmount)}</span>
           </div>
         )}
         <div className="flex items-center justify-between text-gray-600">
-          <span>الشحن</span>
+          <span>{t('order.shipping')}</span>
           <span className="text-gray-900">
-            {order.shippingCost > 0 ? formatKWD(order.shippingCost) : 'مجاني'}
+            {order.shippingCost > 0 ? formatKWD(order.shippingCost) : t('order.freeShipping')}
           </span>
         </div>
         <div className="flex items-center justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
-          <span>الإجمالي</span>
+          <span>{t('order.total')}</span>
           <span>{formatKWD(order.total)}</span>
         </div>
       </div>
@@ -462,7 +465,7 @@ export default function MyOrderDetailPage() {
             className="w-full flex items-center justify-center gap-2 bg-brand text-white rounded-xl px-4 py-3 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
           >
             {reordering ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />}
-            إعادة الطلب
+            {t('order.reorder')}
           </button>
           {reorderMessage && <p className="text-xs text-amber-600 text-center mt-2">{reorderMessage}</p>}
         </div>

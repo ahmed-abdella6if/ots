@@ -13,12 +13,14 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { CheckCircle2, Loader2, PackageSearch } from 'lucide-react'
 import { getOrderForSuccessPage } from '../services/orderService'
+import { useLanguage } from '../hooks/useLanguage'
 import { formatKWD } from '../utils/formatPrice'
 
 export default function OrderSuccessPage() {
   const { id } = useParams()
   const location = useLocation()
   const stateOrder = location.state?.order || null
+  const { t, dir } = useLanguage()
 
   const [order, setOrder] = useState(stateOrder)
   const [loading, setLoading] = useState(!stateOrder)
@@ -63,10 +65,10 @@ export default function OrderSuccessPage() {
 
   if (loading) {
     return (
-      <div dir="rtl" className="min-h-[60vh] flex items-center justify-center">
+      <div dir={dir} className="min-h-[60vh] flex items-center justify-center">
         <div className="flex items-center gap-2 text-gray-400">
           <Loader2 size={20} className="animate-spin" />
-          <span>...جاري تحميل بيانات الطلب</span>
+          <span>{t('order.loadingDetails')}</span>
         </div>
       </div>
     )
@@ -74,37 +76,37 @@ export default function OrderSuccessPage() {
 
   if (notFound || !order) {
     return (
-      <div dir="rtl" className="max-w-md mx-auto px-4 py-24 text-center">
+      <div dir={dir} className="max-w-md mx-auto px-4 py-24 text-center">
         <div className="w-16 h-16 rounded-2xl bg-brand-light flex items-center justify-center mx-auto text-brand-gold">
           <PackageSearch size={28} />
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mt-6">لا يمكن عرض تفاصيل الطلب</h1>
+        <h1 className="text-xl font-bold text-gray-900 mt-6">{t('order.cannotShowDetails')}</h1>
         <p className="text-sm text-gray-500 mt-2">
-          لكن لا تقلق، اذا تم إنشاء الطلب بنجاح فسيصلك تأكيد قريبا. لأي استفسار برجاء التواصل معنا مع ذكر رقم الطلب.
+          {t('order.cannotShowDetailsHint')}
         </p>
         <Link
           to="/"
           className="inline-block mt-6 bg-brand text-white rounded-xl px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
         >
-          العودة للرئيسية
+          {t('error.backHome')}
         </Link>
       </div>
     )
   }
 
   return (
-    <div dir="rtl" className="max-w-2xl mx-auto px-4 py-16 text-center">
+    <div dir={dir} className="max-w-2xl mx-auto px-4 py-16 text-center">
       <div className="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center mx-auto text-green-600">
         <CheckCircle2 size={32} />
       </div>
-      <h1 className="text-2xl font-bold text-gray-900 mt-6">تم استلام طلبك بنجاح</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mt-6">{t('order.success')}</h1>
       <p className="text-sm text-gray-500 mt-2">
-        شكرا لك{order.customer?.fullName ? ` ${order.customer.fullName}` : ''}، سنتواصل معك قريبا لتأكيد التوصيل
+        {t('order.thankYou', { name: order.customer?.fullName ? ` ${order.customer.fullName}` : '' })}
       </p>
 
-      <div className="mt-8 bg-white border border-gray-100 rounded-2xl p-6 text-right space-y-4">
+      <div className={`mt-8 bg-white border border-gray-100 rounded-2xl p-6 space-y-4 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500">رقم الطلب</span>
+          <span className="text-sm text-gray-500">{t('order.orderNumber')}</span>
           <span dir="ltr" className="text-sm font-bold text-gray-900">
             {order.orderNumber}
           </span>
@@ -128,7 +130,7 @@ export default function OrderSuccessPage() {
         )}
 
         <div className="border-t border-gray-100 pt-4 flex items-center justify-between">
-          <span className="text-base font-bold text-gray-900">الإجمالي</span>
+          <span className="text-base font-bold text-gray-900">{t('order.total')}</span>
           <span className="text-base font-bold text-gray-900">{formatKWD(order.total)}</span>
         </div>
       </div>
@@ -138,13 +140,13 @@ export default function OrderSuccessPage() {
           to="/"
           className="bg-brand text-white rounded-xl px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
         >
-          العودة للرئيسية
+          {t('error.backHome')}
         </Link>
         <Link
           to="/"
           className="border border-gray-200 text-gray-700 rounded-xl px-6 py-3 text-sm font-medium hover:bg-gray-50 transition-colors"
         >
-          متابعة التسوق
+          {t('order.continueShopping')}
         </Link>
       </div>
     </div>

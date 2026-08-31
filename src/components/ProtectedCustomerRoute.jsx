@@ -11,15 +11,17 @@
 
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useLanguage } from '../hooks/useLanguage'
 
 export default function ProtectedCustomerRoute() {
   const { user, loading } = useAuth()
+  const { t, dir } = useLanguage()
   const location = useLocation()
 
   if (loading) {
     return (
-      <div dir="rtl" className="min-h-[50vh] flex items-center justify-center">
-        <p className="text-gray-500">...جاري التحقق من الحساب</p>
+      <div dir={dir} className="min-h-[50vh] flex items-center justify-center">
+        <p className="text-gray-500">{t('auth.loading')}</p>
       </div>
     )
   }

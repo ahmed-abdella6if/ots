@@ -9,11 +9,21 @@
 //   3. Anything else (a future/unknown enum value added later without this
 //      component being updated) -> falls back to just showing the raw
 //      status text so the page never breaks
+//
+// STAGE 30 — the step labels themselves (`step`) are the actual stored
+// order_status_enum values (business data, same as elsewhere in the
+// storefront — see MyOrdersPage's status badges), not UI copy, so they are
+// intentionally left as-is rather than translated. Only the surrounding
+// chrome (cancelled banner, unknown-status fallback, RTL/LTR layout) is
+// covered by the language switch.
 
 import { Check, X } from 'lucide-react'
 import { ORDER_STATUS_FLOW, CANCELLED_STATUS } from '../admin/pages/Orders'
+import { useLanguage } from '../hooks/useLanguage'
 
 export default function OrderStatusTimeline({ status }) {
+  const { t, dir } = useLanguage()
+
   if (status === CANCELLED_STATUS) {
     return (
       <div className="flex items-center gap-3 bg-red-50 rounded-2xl p-4">
@@ -21,8 +31,8 @@ export default function OrderStatusTimeline({ status }) {
           <X size={18} />
         </div>
         <div>
-          <p className="text-sm font-bold text-red-700">تم إلغاء الطلب</p>
-          <p className="text-xs text-red-500 mt-0.5">لن يتم تجهيز أو شحن هذا الطلب</p>
+          <p className="text-sm font-bold text-red-700">{t('order.cancelled')}</p>
+          <p className="text-xs text-red-500 mt-0.5">{t('order.cancelledHint')}</p>
         </div>
       </div>
     )
@@ -34,13 +44,18 @@ export default function OrderStatusTimeline({ status }) {
   if (currentIndex === -1) {
     return (
       <div className="bg-gray-50 rounded-2xl p-4 text-sm text-gray-600">
-        حالة الطلب الحالية: <span className="font-bold text-gray-900">{status}</span>
+        {t('order.currentStatus')} <span className="font-bold text-gray-900">{status}</span>
       </div>
     )
   }
 
+  // The connecting line between steps is a physical inline style
+  // (`right`/`left`), so pick the correct side explicitly for the current
+  // direction instead of assuming RTL.
+  const lineSide = dir === 'rtl' ? 'right' : 'left'
+
   return (
-    <div dir="rtl" className="bg-white border border-gray-100 rounded-2xl p-5">
+    <div dir={dir} className="bg-white border border-gray-100 rounded-2xl p-5">
       <ol className="flex items-start justify-between">
         {ORDER_STATUS_FLOW.map((step, index) => {
           const isCompleted = index < currentIndex
@@ -54,7 +69,7 @@ export default function OrderStatusTimeline({ status }) {
                   className={`absolute top-4 h-0.5 w-full -translate-y-1/2 ${
                     index <= currentIndex ? 'bg-brand-gold' : 'bg-gray-100'
                   }`}
-                  style={{ right: '50%' }}
+                  style={{ [lineSide]: '50%' }}
                   aria-hidden="true"
                 />
               )}

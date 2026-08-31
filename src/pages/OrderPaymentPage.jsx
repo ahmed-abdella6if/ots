@@ -20,10 +20,12 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Loader2, AlertCircle, CreditCard } from 'lucide-react'
 import { createMyFatoorahPayment } from '../services/paymentService'
+import { useLanguage } from '../hooks/useLanguage'
 
 export default function OrderPaymentPage() {
   const { orderId } = useParams()
   const navigate = useNavigate()
+  const { t, dir } = useLanguage()
 
   const [status, setStatus] = useState('starting') // starting | redirecting | error
   const [errorMessage, setErrorMessage] = useState('')
@@ -45,7 +47,7 @@ export default function OrderPaymentPage() {
 
         if (!result.paymentUrl) {
           setStatus('error')
-          setErrorMessage('تعذر تجهيز رابط الدفع')
+          setErrorMessage(t('payment.failedToPrepareLink'))
           return
         }
 
@@ -57,7 +59,7 @@ export default function OrderPaymentPage() {
         if (!isMounted) return
         console.error('Failed to start MyFatoorah payment:', err.message)
         setStatus('error')
-        setErrorMessage(err.message || 'تعذر تجهيز الدفع، برجاء المحاولة مرة أخرى')
+        setErrorMessage(err.message || t('payment.failedToPreparePayment'))
       }
     }
 
@@ -68,16 +70,16 @@ export default function OrderPaymentPage() {
   }, [orderId, navigate])
 
   return (
-    <div dir="rtl" className="max-w-md mx-auto px-4 py-24 text-center">
+    <div dir={dir} className="max-w-md mx-auto px-4 py-24 text-center">
       {status !== 'error' ? (
         <>
           <div className="w-16 h-16 rounded-2xl bg-brand-light flex items-center justify-center mx-auto text-brand-gold">
             <CreditCard size={28} />
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mt-6">جاري تجهيز الدفع</h1>
+          <h1 className="text-xl font-bold text-gray-900 mt-6">{t('payment.preparing')}</h1>
           <p className="text-sm text-gray-500 mt-2 flex items-center justify-center gap-2">
             <Loader2 size={16} className="animate-spin" />
-            سيتم تحويلك لصفحة الدفع الآمنة خلال لحظات
+            {t('payment.redirectingHint')}
           </p>
         </>
       ) : (
@@ -85,20 +87,20 @@ export default function OrderPaymentPage() {
           <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto text-red-500">
             <AlertCircle size={28} />
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mt-6">تعذر تجهيز الدفع</h1>
+          <h1 className="text-xl font-bold text-gray-900 mt-6">{t('payment.failedTitle')}</h1>
           <p className="text-sm text-gray-500 mt-2">{errorMessage}</p>
           <div className="flex items-center justify-center gap-3 mt-6">
             <button
               onClick={() => window.location.reload()}
               className="bg-brand text-white rounded-xl px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
             >
-              إعادة المحاولة
+              {t('payment.retry')}
             </button>
             <Link
               to="/account/orders"
               className="border border-gray-200 text-gray-700 rounded-xl px-6 py-3 text-sm font-medium hover:bg-gray-50 transition-colors"
             >
-              طلباتي
+              {t('account.myOrders')}
             </Link>
           </div>
         </>

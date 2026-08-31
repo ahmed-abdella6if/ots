@@ -5,22 +5,25 @@
 
 import { Link } from 'react-router-dom'
 import { SearchX } from 'lucide-react'
+import { useLanguage } from '../hooks/useLanguage'
 
 export default function NotFoundPage() {
+  const { t } = useLanguage()
+
   return (
     <div className="max-w-md mx-auto px-4 py-24 text-center">
       <div className="w-16 h-16 rounded-2xl bg-brand-light flex items-center justify-center mx-auto text-brand-gold">
         <SearchX size={28} />
       </div>
-      <h1 className="text-xl font-bold text-gray-900 mt-6">الصفحة غير موجودة</h1>
+      <h1 className="text-xl font-bold text-gray-900 mt-6">{t('error.notFoundTitle')}</h1>
       <p className="text-sm text-gray-500 mt-2">
-        عذرا، الصفحة التي تبحث عنها غير موجودة أو تم حذفها
+        {t('error.notFoundMessage')}
       </p>
       <Link
         to="/"
         className="inline-block mt-6 bg-brand text-white rounded-xl px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
       >
-        العودة للرئيسية
+        {t('error.backHome')}
       </Link>
     </div>
   )

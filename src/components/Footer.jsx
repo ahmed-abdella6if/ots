@@ -9,6 +9,7 @@
 
 import { Link } from 'react-router-dom'
 import { Instagram, Facebook, MessageCircle } from 'lucide-react'
+import { useLanguage } from '../hooks/useLanguage'
 
 const SOCIAL_ICONS = {
   instagram: Instagram,
@@ -16,6 +17,7 @@ const SOCIAL_ICONS = {
 }
 
 export default function Footer({ storeSettings, categories }) {
+  const { t } = useLanguage()
   const brandName = storeSettings?.brandName || 'المتجر'
   const socialLinks = storeSettings?.socialLinks || {}
   const whatsappNumber = storeSettings?.whatsappNumber
@@ -77,7 +79,7 @@ export default function Footer({ storeSettings, categories }) {
         {categories.length > 0 && (
           <div>
             <h4 className="font-semibold text-sm text-white/60 mb-3">
-              التصنيفات
+              {t('footer.categories')}
             </h4>
 
             <ul className="space-y-2">
@@ -98,7 +100,7 @@ export default function Footer({ storeSettings, categories }) {
         {/* سياسات المتجر */}
         <div>
           <h4 className="font-semibold text-sm text-white/60 mb-3">
-            سياسات المتجر
+            {t('footer.storePolicies')}
           </h4>
 
           <ul className="space-y-2">
@@ -107,7 +109,7 @@ export default function Footer({ storeSettings, categories }) {
                 to="/policies/payment"
                 className="text-sm text-white/85 hover:text-brand-gold transition-colors"
               >
-                سياسة الدفع
+                {t('footer.paymentPolicy')}
               </Link>
             </li>
 
@@ -116,7 +118,7 @@ export default function Footer({ storeSettings, categories }) {
                 to="/policies/shipping"
                 className="text-sm text-white/85 hover:text-brand-gold transition-colors"
               >
-                سياسة الشحن
+                {t('footer.shippingPolicy')}
               </Link>
             </li>
 
@@ -125,7 +127,7 @@ export default function Footer({ storeSettings, categories }) {
                 to="/policies/returns"
                 className="text-sm text-white/85 hover:text-brand-gold transition-colors"
               >
-                سياسة الاستبدال والاسترجاع
+                {t('footer.returnsPolicy')}
               </Link>
             </li>
           </ul>
@@ -134,7 +136,7 @@ export default function Footer({ storeSettings, categories }) {
 
       <div className="border-t border-white/10 py-4">
         <p className="text-center text-xs text-white/50">
-          © {year} {brandName}. جميع الحقوق محفوظة
+          © {year} {brandName}. {t('footer.rightsReserved')}
         </p>
       </div>
     </footer>

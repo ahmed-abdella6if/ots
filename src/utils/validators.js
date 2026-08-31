@@ -10,8 +10,18 @@
 // one. Kuwait mobile numbers: 8 digits, first digit 5, 6, or 9. An
 // optional +965/965 prefix is stripped before testing so a customer who
 // includes their country code isn't punished for it.
-const KUWAIT_PHONE_RE = /^[569][0-9]{7}$/
+// STAGE 28 — exported (was module-private) so RegisterPage.jsx can reuse
+// the exact same Kuwait phone validation as checkout instead of
+// duplicating the regex.
+export const KUWAIT_PHONE_RE = /^[569][0-9]{7}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// Strips spaces/dashes and an optional +965/965 prefix, same normalization
+// validateCheckoutFields already applied inline — pulled out so
+// RegisterPage.jsx can produce the identical cleaned value to store.
+export function cleanPhone(phone) {
+  return (phone || '').replace(/[\s-]/g, '').replace(/^(\+?965)/, '')
+}
 
 /**
  * Validates the Stage 15 checkout form fields against the columns that
@@ -32,7 +42,7 @@ export function validateCheckoutFields({ fullName, phone, email, address, city, 
     errors.fullName = 'الاسم الكامل قصير جدا'
   }
 
-  const cleanedPhone = (phone || '').replace(/[\s-]/g, '').replace(/^(\+?965)/, '')
+  const cleanedPhone = cleanPhone(phone)
   if (!cleanedPhone) {
     errors.phone = 'رقم الهاتف مطلوب'
   } else if (!KUWAIT_PHONE_RE.test(cleanedPhone)) {

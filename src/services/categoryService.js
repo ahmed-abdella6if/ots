@@ -212,6 +212,30 @@ export async function updateCategory(categoryId, { name, description, sortOrder,
 }
 
 /**
+ * STAGE 30 — Sets (or clears) a category's image_url. Separate from
+ * updateCategory() so the Categories admin page can upload/replace an image
+ * independently of the name/description/sort-order form fields, the same
+ * way ProductImages is split out from ProductForm. Reuses the existing
+ * `image_url` column on `categories` (already present in schema.sql /
+ * getAllCategoriesForAdmin — no migration needed) and the existing
+ * `site-assets` storage bucket (see storageService.js — its schema.sql
+ * comment already earmarks it for "category images and brand/logo assets").
+ * @param {string} categoryId
+ * @param {string|null} imageUrl
+ */
+export async function updateCategoryImage(categoryId, imageUrl) {
+  const { data, error } = await supabase
+    .from('categories')
+    .update({ image_url: imageUrl })
+    .eq('id', categoryId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return mapCategoryRow(data)
+}
+
+/**
  * Toggles a category's active status without touching any other field.
  * @param {string} categoryId
  * @param {boolean} isActive

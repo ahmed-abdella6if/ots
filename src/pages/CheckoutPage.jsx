@@ -32,9 +32,10 @@ import {
 } from 'lucide-react'
 import { useCart } from '../hooks/useCart'
 import { useAuth } from '../hooks/useAuth'
+import { useLanguage } from '../hooks/useLanguage'
 import { formatKWD } from '../utils/formatPrice'
 import { validateCheckoutFields } from '../utils/validators'
-import { validateCartForCheckout, createOrder, calculateShippingCost } from '../services/orderService'
+import { validateCartForCheckout, createOrder, calculateShippingCost, FREE_SHIPPING_MIN_QUANTITY } from '../services/orderService'
 import { validateDiscountCode } from '../services/discountService'
 import { getStoreSettings } from '../services/settingsService'
 
@@ -48,35 +49,43 @@ const GOVERNORATES = [
   'العاصمة', 'حولي', 'الفروانية', 'مبارك الكبير', 'الاحمدي', 'الجهراء',
 ]
 
-const UNAVAILABLE_MESSAGES = {
-  product_unavailable: 'هذا المنتج لم يعد متوفرا',
-  variant_unavailable: 'اللون / المقاس المختار لم يعد متوفرا',
-  insufficient_stock: 'الكمية المطلوبة غير متوفرة في المخزون حاليا',
+// STAGE 30 — converted from static Arabic-only objects to functions of `t`
+// so each message follows the active language. Called with the `t` from
+// useLanguage() at each call site inside the component.
+function getUnavailableMessages(t) {
+  return {
+    product_unavailable: t('checkout.productUnavailableReason'),
+    variant_unavailable: t('checkout.variantUnavailableReason'),
+    insufficient_stock: t('checkout.insufficientStockReason'),
+  }
 }
 
-const DISCOUNT_ERROR_MESSAGES = {
-  not_found: 'كود الخصم غير صحيح',
-  not_started: 'كود الخصم غير مفعل بعد',
-  expired: 'انتهت صلاحية كود الخصم',
-  usage_limit_reached: 'تم استخدام كود الخصم بالكامل',
-  min_order_amount: 'الحد الادنى للطلب غير متحقق لاستخدام هذا الكود',
+function getDiscountErrorMessages(t) {
+  return {
+    not_found: t('checkout.discountNotFound'),
+    not_started: t('checkout.discountNotStarted'),
+    expired: t('checkout.discountExpired'),
+    usage_limit_reached: t('checkout.discountUsageLimitReached'),
+    min_order_amount: t('checkout.discountMinOrderNotMet'),
+  }
 }
 
 function EmptyCartState() {
+  const { t } = useLanguage()
   return (
     <div className="max-w-md mx-auto px-4 py-24 text-center">
       <div className="w-16 h-16 rounded-2xl bg-brand-light flex items-center justify-center mx-auto text-brand-gold">
         <ShoppingBag size={28} />
       </div>
-      <h1 className="text-xl font-bold text-gray-900 mt-6">السلة فارغة</h1>
+      <h1 className="text-xl font-bold text-gray-900 mt-6">{t('cart.empty')}</h1>
       <p className="text-sm text-gray-500 mt-2">
-        لا يمكن إتمام الطلب بدون منتجات في السلة
+        {t('checkout.emptyCartHint')}
       </p>
       <Link
         to="/"
         className="inline-block mt-6 bg-brand text-white rounded-xl px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
       >
-        تصفح المنتجات
+        {t('cart.browseProducts')}
       </Link>
     </div>
   )
@@ -108,6 +117,7 @@ function TextInput({ id, error, ...props }) {
 export default function CheckoutPage() {
   const { items: cartItems, clearCart } = useCart()
   const { user, profile } = useAuth()
+  const { t, dir } = useLanguage()
   const navigate = useNavigate()
 
   const [validatedItems, setValidatedItems] = useState(null) // null = still loading
@@ -182,7 +192,7 @@ export default function CheckoutPage() {
       })
       .catch((err) => {
         console.error('Failed to validate cart:', err.message)
-        if (isMounted) setLoadError('تعذر تحميل بيانات السلة، برجاء المحاولة مرة اخرى')
+        if (isMounted) setLoadError(t('checkout.cartLoadError'))
       })
 
     return () => {
@@ -201,27 +211,48 @@ export default function CheckoutPage() {
   )
   const discountAmount = discount ? Math.min(discount.discountAmount, subtotal) : 0
 
+  // STAGE 28 — total quantity from the same trusted, validated `okItems`
+  // subtotal is computed from (never raw cartItems / client state).
+  const totalQuantity = useMemo(
+    () => okItems.reduce((sum, i) => sum + (Number(i.quantity) || 0), 0),
+    [okItems]
+  )
+
   // STAGE 21 — same shared function createOrder() uses, evaluated against
   // the pre-discount `subtotal` (never the post-discount amount — see the
   // Stage 21 report for why free-shipping eligibility must not be reduced
-  // by a discount).
+  // by a discount). STAGE 28 — now also takes totalQuantity for the
+  // 12-piece free-shipping rule; see calculateShippingCost() itself for
+  // how the two rules combine.
   const shippingCost = useMemo(
-    () => calculateShippingCost(subtotal, shippingSettings),
-    [subtotal, shippingSettings]
+    () => calculateShippingCost(subtotal, shippingSettings, totalQuantity),
+    [subtotal, shippingSettings, totalQuantity]
   )
   const total = Math.max(0, Math.round((subtotal - discountAmount + shippingCost) * 100) / 100)
+
+  // STAGE 28 — pieces remaining until the 12-piece free-shipping rule
+  // kicks in. Takes priority over the older amount-based nudge below (only
+  // one nudge is ever shown at once, per this stage's "don't make checkout
+  // noisy" instruction) since this store's primary shipping rule is now
+  // quantity-based.
+  const piecesToFreeShipping = useMemo(() => {
+    if (shippingCost === 0) return null // already free (either rule)
+    const remaining = FREE_SHIPPING_MIN_QUANTITY - totalQuantity
+    return remaining > 0 ? remaining : null
+  }, [shippingCost, totalQuantity])
 
   // Small, optional nudge — only shown when it can be computed safely
   // (free shipping is on, a threshold is configured, and the cart isn't
   // there yet). Never shown once qualified, never shown when free shipping
   // is off.
   const amountToFreeShipping = useMemo(() => {
+    if (piecesToFreeShipping != null) return null // quantity nudge takes priority
     if (!shippingSettings?.freeShippingEnabled) return null
     const threshold = Number(shippingSettings.freeShippingMinOrderAmount) || 0
     if (threshold <= 0) return null // threshold 0 means already free — nothing to nudge toward
     const remaining = Math.round((threshold - subtotal) * 100) / 100
     return remaining > 0 ? remaining : null
-  }, [shippingSettings, subtotal])
+  }, [shippingSettings, subtotal, piecesToFreeShipping])
 
   const isLoadingSummary = validatedItems === null
   const canSubmit =
@@ -242,13 +273,13 @@ export default function CheckoutPage() {
       const result = await validateDiscountCode(discountInput, subtotal)
       if (!result.valid) {
         setDiscount(null)
-        setDiscountError(DISCOUNT_ERROR_MESSAGES[result.reason] || 'كود الخصم غير صالح')
+        setDiscountError(getDiscountErrorMessages(t)[result.reason] || t('checkout.discountInvalid'))
       } else {
         setDiscount({ id: result.discount.id, code: result.discount.code, discountAmount: result.discountAmount })
       }
     } catch (err) {
       console.error('Discount validation failed:', err.message)
-      setDiscountError('تعذر التحقق من كود الخصم، برجاء المحاولة مرة اخرى')
+      setDiscountError(t('checkout.discountVerifyError'))
     } finally {
       setDiscountChecking(false)
     }
@@ -281,17 +312,17 @@ export default function CheckoutPage() {
       setValidatedItems(freshItems)
 
       if (freshBad.length > 0) {
-        setSubmitError('تغيرت بيانات بعض المنتجات في السلة، برجاء مراجعة الطلب قبل المتابعة')
+        setSubmitError(t('checkout.cartChangedError'))
         return
       }
 
       const freshOk = freshItems.filter((i) => i.ok)
       if (freshOk.length === 0) {
-        setSubmitError('لا توجد منتجات صالحة للطلب في السلة')
+        setSubmitError(t('checkout.noValidItemsError'))
         return
       }
       if (freshOk.some((i) => !i.variantId)) {
-        setSubmitError('احد المنتجات في السلة غير جاهز للطلب حاليا، برجاء التواصل معنا او إزالته من السلة')
+        setSubmitError(t('checkout.itemNotReadyError'))
         return
       }
 
@@ -302,8 +333,8 @@ export default function CheckoutPage() {
         const discountResult = await validateDiscountCode(discount.code, freshSubtotal)
         if (!discountResult.valid) {
           setDiscount(null)
-          setDiscountError(DISCOUNT_ERROR_MESSAGES[discountResult.reason] || 'كود الخصم غير صالح')
-          setSubmitError('لم يعد كود الخصم صالحا وتم إزالته، برجاء مراجعة الطلب والمحاولة مرة اخرى')
+          setDiscountError(getDiscountErrorMessages(t)[discountResult.reason] || t('checkout.discountInvalid'))
+          setSubmitError(t('checkout.discountNoLongerValid'))
           return
         }
         freshDiscount = {
@@ -344,7 +375,7 @@ export default function CheckoutPage() {
         // fix) — this means someone else took the remaining stock between
         // our last check and now. Re-validate so the summary reflects
         // reality instead of just letting the customer retry blindly.
-        setSubmitError('عذرًا، نفذت الكمية المتاحة من احد المنتجات قبل إتمام طلبك، برجاء مراجعة السلة والمحاولة مرة اخرى')
+        setSubmitError(t('checkout.stockRanOut'))
         validateCartForCheckout(cartItems)
           .then((result) => setValidatedItems(result))
           .catch(() => {})
@@ -358,9 +389,9 @@ export default function CheckoutPage() {
         // re-applied, matching the friendly-Arabic-message requirement.
         setDiscount(null)
         setDiscountInput('')
-        setSubmitError('كود الخصم لم يعد متاحا، برجاء المحاولة مرة اخرى')
+        setSubmitError(t('checkout.discountNoLongerAvailable'))
       } else {
-        setSubmitError('حدث خطأ اثناء إنشاء الطلب، برجاء المحاولة مرة اخرى')
+        setSubmitError(t('checkout.createOrderError'))
       }
     } finally {
       setSubmitting(false)
@@ -372,29 +403,29 @@ export default function CheckoutPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate dir="rtl" className="max-w-5xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">إتمام الطلب</h1>
+    <form onSubmit={handleSubmit} noValidate dir={dir} className="max-w-5xl mx-auto px-4 py-10">
+      <h1 className="text-2xl font-bold text-gray-900 mb-8">{t('checkout.title')}</h1>
 
       <div className="grid lg:grid-cols-3 gap-8 items-start">
         {/* Customer info */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white border border-gray-100 rounded-2xl p-5 space-y-4">
-            <h2 className="text-base font-bold text-gray-900">بيانات التوصيل</h2>
+            <h2 className="text-base font-bold text-gray-900">{t('checkout.shippingInfo')}</h2>
 
             <div>
-              <FieldLabel htmlFor="fullName">الاسم الكامل</FieldLabel>
+              <FieldLabel htmlFor="fullName">{t('checkout.fullName')}</FieldLabel>
               <TextInput
                 id="fullName"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 error={fieldErrors.fullName}
-                placeholder="الاسم الكامل"
+                placeholder={t('checkout.fullName')}
               />
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <FieldLabel htmlFor="phone">رقم الهاتف</FieldLabel>
+                <FieldLabel htmlFor="phone">{t('checkout.phone')}</FieldLabel>
                 <TextInput
                   id="phone"
                   dir="ltr"
@@ -405,7 +436,7 @@ export default function CheckoutPage() {
                 />
               </div>
               <div>
-                <FieldLabel htmlFor="email">البريد الالكتروني (اختياري)</FieldLabel>
+                <FieldLabel htmlFor="email">{t('checkout.emailOptional')}</FieldLabel>
                 <TextInput
                   id="email"
                   dir="ltr"
@@ -419,29 +450,29 @@ export default function CheckoutPage() {
             </div>
 
             <div>
-              <FieldLabel htmlFor="address">العنوان</FieldLabel>
+              <FieldLabel htmlFor="address">{t('checkout.address')}</FieldLabel>
               <TextInput
                 id="address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 error={fieldErrors.address}
-                placeholder="الشارع، رقم المبنى، الشقة، علامة مميزة"
+                placeholder={t('checkout.addressPlaceholder')}
               />
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <FieldLabel htmlFor="city">المدينة</FieldLabel>
+                <FieldLabel htmlFor="city">{t('checkout.city')}</FieldLabel>
                 <TextInput
                   id="city"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   error={fieldErrors.city}
-                  placeholder="المدينة"
+                  placeholder={t('checkout.city')}
                 />
               </div>
               <div>
-                <FieldLabel htmlFor="governorate">المحافظة</FieldLabel>
+                <FieldLabel htmlFor="governorate">{t('checkout.governorate')}</FieldLabel>
                 <select
                   id="governorate"
                   value={governorate}
@@ -450,7 +481,7 @@ export default function CheckoutPage() {
                     fieldErrors.governorate ? 'border-red-300' : 'border-gray-200 focus:border-brand-gold'
                   }`}
                 >
-                  <option value="">اختر المحافظة</option>
+                  <option value="">{t('checkout.chooseGovernorate')}</option>
                   {GOVERNORATES.map((g) => (
                     <option key={g} value={g}>
                       {g}
@@ -464,13 +495,13 @@ export default function CheckoutPage() {
             </div>
 
             <div>
-              <FieldLabel htmlFor="notes">ملاحظات إضافية (اختياري)</FieldLabel>
+              <FieldLabel htmlFor="notes">{t('checkout.notesOptional')}</FieldLabel>
               <textarea
                 id="notes"
                 rows={3}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="اي تفاصيل إضافية تساعد في توصيل طلبك"
+                placeholder={t('checkout.notesPlaceholder')}
                 className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition-colors focus:ring-2 focus:ring-brand-gold/40 focus:border-brand-gold resize-none"
               />
             </div>
@@ -479,7 +510,7 @@ export default function CheckoutPage() {
 
         {/* Order summary */}
         <div className="bg-white border border-gray-100 rounded-2xl p-5 space-y-5 lg:sticky lg:top-6">
-          <h2 className="text-base font-bold text-gray-900">ملخص الطلب</h2>
+          <h2 className="text-base font-bold text-gray-900">{t('checkout.orderSummary')}</h2>
 
           {loadError && (
             <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2.5">
@@ -533,7 +564,7 @@ export default function CheckoutPage() {
                 >
                   <AlertCircle size={16} className="shrink-0 mt-0.5" />
                   <span>
-                    {item.name} — {UNAVAILABLE_MESSAGES[item.reason] || 'غير متوفر حاليا'}
+                    {item.name} — {getUnavailableMessages(t)[item.reason] || t('checkout.itemUnavailable')}
                     {item.reason === 'insufficient_stock' && item.availableStock != null && (
                       <> (المتاح: {item.availableStock})</>
                     )}
@@ -544,7 +575,7 @@ export default function CheckoutPage() {
               {!hasVariantlessItem ? null : (
                 <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 rounded-xl px-3 py-2.5">
                   <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                  <span>احد المنتجات غير جاهز للطلب حاليا، برجاء إزالته من السلة او التواصل معنا</span>
+                  <span>{t('checkout.itemNotReadyHint')}</span>
                 </div>
               )}
             </div>
@@ -557,13 +588,13 @@ export default function CheckoutPage() {
                 <div className="flex items-center gap-2 text-sm text-gray-900">
                   <CheckCircle2 size={16} className="text-brand-gold shrink-0" />
                   <span className="font-medium">{discount.code}</span>
-                  <span className="text-xs text-gray-500">تم تطبيق الخصم</span>
+                  <span className="text-xs text-gray-500">{t('checkout.discountApplied')}</span>
                 </div>
                 <button
                   type="button"
                   onClick={handleRemoveDiscount}
                   className="text-gray-400 hover:text-red-500 transition-colors"
-                  aria-label="إزالة كود الخصم"
+                  aria-label={t('checkout.removeDiscountCode')}
                 >
                   <X size={16} />
                 </button>
@@ -572,13 +603,13 @@ export default function CheckoutPage() {
               <div>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <Tag size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Tag size={16} className={`absolute ${dir === 'rtl' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 text-gray-400`} />
                     <input
                       type="text"
                       value={discountInput}
                       onChange={(e) => setDiscountInput(e.target.value)}
-                      placeholder="كود الخصم"
-                      className="w-full rounded-xl border border-gray-200 pr-9 pl-3 py-2.5 text-sm outline-none transition-colors focus:ring-2 focus:ring-brand-gold/40 focus:border-brand-gold"
+                      placeholder={t('checkout.discountCode')}
+                      className={`w-full rounded-xl border border-gray-200 ${dir === 'rtl' ? 'pr-9 pl-3' : 'pl-9 pr-3'} py-2.5 text-sm outline-none transition-colors focus:ring-2 focus:ring-brand-gold/40 focus:border-brand-gold`}
                     />
                   </div>
                   <button
@@ -587,7 +618,7 @@ export default function CheckoutPage() {
                     disabled={discountChecking || !discountInput.trim()}
                     className="shrink-0 bg-brand text-white rounded-xl px-4 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {discountChecking ? <Loader2 size={16} className="animate-spin" /> : 'تطبيق'}
+                    {discountChecking ? <Loader2 size={16} className="animate-spin" /> : t('checkout.apply')}
                   </button>
                 </div>
                 {discountError && <p className="text-xs text-red-500 mt-1.5">{discountError}</p>}
@@ -597,7 +628,7 @@ export default function CheckoutPage() {
 
           {/* STAGE 18 — payment method */}
           <div className="border-t border-gray-100 pt-4 space-y-2">
-            <h3 className="text-sm font-bold text-gray-900 mb-1">طريقة الدفع</h3>
+            <h3 className="text-sm font-bold text-gray-900 mb-1">{t('checkout.paymentMethod')}</h3>
 
             <label
               className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
@@ -614,7 +645,7 @@ export default function CheckoutPage() {
               />
               <CreditCard size={18} className="text-gray-500 shrink-0" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">الدفع الإلكتروني</p>
+                <p className="text-sm font-medium text-gray-900">{t('checkout.onlinePayment')}</p>
                 <p className="text-xs text-gray-500">KNET، فيزا/ماستركارد وطرق أخرى عبر MyFatoorah</p>
               </div>
             </label>
@@ -634,7 +665,7 @@ export default function CheckoutPage() {
               />
               <Truck size={18} className="text-gray-500 shrink-0" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">الدفع عند الاستلام</p>
+                <p className="text-sm font-medium text-gray-900">{t('checkout.cashOnDelivery')}</p>
               </div>
             </label>
           </div>
@@ -642,26 +673,34 @@ export default function CheckoutPage() {
           {/* Totals */}
           <div className="border-t border-gray-100 pt-4 space-y-2 text-sm">
             <div className="flex items-center justify-between text-gray-600">
-              <span>الإجمالي الفرعي</span>
+              <span>{t('checkout.subtotal')}</span>
               <span className="text-gray-900">{formatKWD(subtotal)}</span>
             </div>
             {discountAmount > 0 && (
               <div className="flex items-center justify-between text-brand-gold">
-                <span>الخصم</span>
+                <span>{t('checkout.discount')}</span>
                 <span>- {formatKWD(discountAmount)}</span>
               </div>
             )}
             <div className="flex items-center justify-between text-gray-600">
-              <span>الشحن</span>
-              <span className="text-gray-900">{shippingCost > 0 ? formatKWD(shippingCost) : 'مجاني'}</span>
+              <span>{t('checkout.shipping')}</span>
+              <span className="text-gray-900">{shippingCost > 0 ? formatKWD(shippingCost) : t('checkout.freeShipping')}</span>
             </div>
+            {piecesToFreeShipping != null && (
+              <p className="text-xs text-gray-400 -mt-1">
+                {t('checkout.moreItemsForFreeShipping', {
+                  count: piecesToFreeShipping,
+                  unit: piecesToFreeShipping === 1 ? t('checkout.extraPieceSingular') : t('checkout.extraPiecePlural'),
+                })}
+              </p>
+            )}
             {amountToFreeShipping != null && (
               <p className="text-xs text-gray-400 -mt-1">
-                باقي {formatKWD(amountToFreeShipping)} للحصول على شحن مجاني
+                {t('checkout.moreAmountForFreeShipping', { amount: formatKWD(amountToFreeShipping) })}
               </p>
             )}
             <div className="flex items-center justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
-              <span>الإجمالي</span>
+              <span>{t('checkout.total')}</span>
               <span>{formatKWD(total)}</span>
             </div>
           </div>
@@ -681,10 +720,10 @@ export default function CheckoutPage() {
             {submitting ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                <span>...جاري إنشاء الطلب</span>
+                <span>{t('checkout.creatingOrder')}</span>
               </>
             ) : (
-              <span>{paymentMethod === 'online' ? 'المتابعة للدفع' : 'تأكيد الطلب'}</span>
+              <span>{paymentMethod === 'online' ? t('checkout.continueToPayment') : t('checkout.placeOrder')}</span>
             )}
           </button>
         </div>

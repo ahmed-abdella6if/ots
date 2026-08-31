@@ -4,22 +4,37 @@
 // section always renders something real instead of a blank/broken hero.
 
 import { Link } from 'react-router-dom'
+import { useLanguage } from '../hooks/useLanguage'
 
-export default function HeroSection({ homepageContent, storeSettings, fallbackCategorySlug }) {
+// STAGE 30 FIX — the default CTA used to link to `/category/<categories[0].slug>`,
+// i.e. whichever category happened to sort first (in practice: men's). That sent
+// every visitor who hadn't set a custom homepage CTA straight into one category
+// instead of the general category-selection experience. There's no separate
+// "shop" route to link to (and Stage 30 says not to invent one), so the default
+// now points at the homepage's own categories section (#shop-categories, see
+// HomePage.jsx) — the existing general category-selection UI. An admin-configured
+// heroCtaLink (HomepageManagement) still always wins and is untouched.
+export const DEFAULT_CTA_LINK = '/#shop-categories'
+
+export default function HeroSection({ homepageContent, storeSettings }) {
+  const { t, dir } = useLanguage()
   const brandName = storeSettings?.brandName || 'المتجر'
 
+  // heroTitle/heroMessage/heroCtaText are admin-entered business content
+  // (homepage_content table) — stored data, not UI copy, so they are NOT
+  // translated here (Stage 30 explicitly excludes rewriting stored business
+  // data). Only the *fallback* shown when the admin hasn't set them uses the
+  // i18n dictionary, since that fallback is genuinely UI copy.
   const title = homepageContent?.heroTitle || brandName
-  const message =
-    homepageContent?.heroMessage || 'ملابس داخلية عصرية بجودة عالية وتصميم يليق بك'
-  const ctaText = homepageContent?.heroCtaText || 'تسوق الان'
-  const ctaLink =
-    homepageContent?.heroCtaLink || (fallbackCategorySlug ? `/category/${fallbackCategorySlug}` : '/')
+  const message = homepageContent?.heroMessage || t('home.heroDefaultMessage')
+  const ctaText = homepageContent?.heroCtaText || t('home.shopNow')
+  const ctaLink = homepageContent?.heroCtaLink || DEFAULT_CTA_LINK
   const imageUrl = homepageContent?.heroImageUrl || storeSettings?.logoUrl
 
   return (
     <section className="bg-brand-light">
       <div className="max-w-6xl mx-auto px-4 py-10 sm:py-14 flex flex-col sm:flex-row items-center gap-8">
-        <div className="flex-1 text-center sm:text-right">
+        <div className={`flex-1 text-center ${dir === 'rtl' ? 'sm:text-right' : 'sm:text-left'}`}>
           <h1 className="text-2xl sm:text-3xl font-bold text-brand">{title}</h1>
           <p className="text-gray-600 mt-3 max-w-md mx-auto sm:mx-0">{message}</p>
           <Link
@@ -31,14 +46,14 @@ export default function HeroSection({ homepageContent, storeSettings, fallbackCa
         </div>
 
         {imageUrl && (
-  <div className="flex-1 w-full max-w-xl">
-    <img
-      src={imageUrl}
-      alt={brandName}
-      className="w-full rounded-2xl object-cover aspect-[16/9]"
-    />
-  </div>
-)}
+          <div className="flex-1 w-full max-w-xl">
+            <img
+              src={imageUrl}
+              alt={brandName}
+              className="w-full rounded-2xl object-cover aspect-[16/9]"
+            />
+          </div>
+        )}
       </div>
     </section>
   )

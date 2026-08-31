@@ -1,20 +1,25 @@
 // Large category card for the homepage's featured-categories section.
 
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, ImageOff } from 'lucide-react'
 
 export default function CategoryCard({ category }) {
   const { name, slug, description, imageUrl } = category
+  // STAGE 30 — a broken/unreachable admin-uploaded image falls back to the
+  // same ImageOff placeholder as "no image set", instead of a broken <img>.
+  const [imageFailed, setImageFailed] = useState(false)
 
   return (
     <Link
       to={`/category/${slug}`}
       className="group relative block rounded-2xl overflow-hidden aspect-[4/5] bg-gray-100"
     >
-      {imageUrl ? (
+      {imageUrl && !imageFailed ? (
         <img
           src={imageUrl}
           alt={name}
+          onError={() => setImageFailed(true)}
           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
       ) : (

@@ -9,17 +9,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PackageX, ChevronLeft, AlertCircle } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { useLanguage } from '../hooks/useLanguage'
 import { getMyOrders } from '../services/orderService'
 import { formatKWD } from '../utils/formatPrice'
 import { StatusBadge, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_STYLES, ORDER_STATUS_STYLES } from '../admin/pages/Orders'
-
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString('ar-EG', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
 
 function OrderRowSkeleton() {
   return (
@@ -36,8 +29,18 @@ function OrderRowSkeleton() {
 
 export default function MyOrdersPage() {
   const { user } = useAuth()
+  const { t, dir, language } = useLanguage()
   const [orders, setOrders] = useState(null) // null = loading
   const [error, setError] = useState('')
+
+  // STAGE 30 — date locale follows the active language (was hardcoded 'ar-EG').
+  function formatDate(dateStr) {
+    return new Date(dateStr).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-GB', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
 
   useEffect(() => {
     if (!user?.id) return
@@ -50,7 +53,7 @@ export default function MyOrdersPage() {
       })
       .catch((err) => {
         console.error('Failed to load orders:', err.message)
-        if (isMounted) setError('تعذر تحميل الطلبات، برجاء المحاولة مرة اخرى')
+        if (isMounted) setError(t('account.ordersLoadError'))
       })
 
     return () => {
@@ -59,11 +62,11 @@ export default function MyOrdersPage() {
   }, [user?.id])
 
   return (
-    <div dir="rtl" className="max-w-3xl mx-auto px-4 py-10">
+    <div dir={dir} className="max-w-3xl mx-auto px-4 py-10">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">طلباتي</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('account.myOrders')}</h1>
         <Link to="/account" className="text-sm text-gray-500 hover:text-brand-gold transition-colors">
-          العودة للحساب
+          {t('account.backToAccount')}
         </Link>
       </div>
 
@@ -85,13 +88,13 @@ export default function MyOrdersPage() {
           <div className="w-16 h-16 rounded-2xl bg-brand-light flex items-center justify-center mx-auto text-brand-gold">
             <PackageX size={28} />
           </div>
-          <h2 className="text-lg font-bold text-gray-900 mt-6">لا توجد طلبات حتى الآن</h2>
-          <p className="text-sm text-gray-500 mt-2">لم تقم بأي طلب بعد</p>
+          <h2 className="text-lg font-bold text-gray-900 mt-6">{t('account.noOrdersYet')}</h2>
+          <p className="text-sm text-gray-500 mt-2">{t('account.noOrdersHint')}</p>
           <Link
             to="/"
             className="inline-block mt-6 bg-brand text-white rounded-xl px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
           >
-            تصفح المنتجات
+            {t('cart.browseProducts')}
           </Link>
         </div>
       ) : (
@@ -108,10 +111,11 @@ export default function MyOrdersPage() {
                     {order.orderNumber}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {formatDate(order.createdAt)} · {order.itemCount} {order.itemCount === 1 ? 'منتج' : 'منتجات'}
+                    {formatDate(order.createdAt)} · {order.itemCount}{' '}
+                    {order.itemCount === 1 ? t('account.itemSingular') : t('account.itemPlural')}
                   </p>
                 </div>
-                <ChevronLeft size={18} className="text-gray-300 shrink-0" />
+                <ChevronLeft size={18} className={`text-gray-300 shrink-0 ${dir === 'ltr' ? 'rotate-180' : ''}`} />
               </div>
 
               <div className="flex items-center justify-between mt-3">

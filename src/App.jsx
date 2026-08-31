@@ -21,6 +21,7 @@ import AccountPage from './pages/AccountPage'
 import MyOrdersPage from './pages/MyOrdersPage'
 import MyOrderDetailPage from './pages/MyOrderDetailPage'
 import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 import PolicyPaymentPage from './pages/PolicyPaymentPage'
 import PolicyShippingPage from './pages/PolicyShippingPage'
 import PolicyReturnsPage from './pages/PolicyReturnsPage'
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="/account/orders/:id" element={<MyOrderDetailPage />} />
         </Route>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
         <Route path="/policies/payment" element={<PolicyPaymentPage />} />
         <Route path="/policies/shipping" element={<PolicyShippingPage />} />
         <Route path="/policies/returns" element={<PolicyReturnsPage />} />

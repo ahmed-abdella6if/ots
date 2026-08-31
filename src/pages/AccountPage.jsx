@@ -16,15 +16,7 @@
 import { useNavigate } from 'react-router-dom'
 import { User, Mail, Phone, CalendarDays, PackageSearch, LogOut, ChevronLeft } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
-
-function formatDate(dateStr) {
-  if (!dateStr) return null
-  return new Date(dateStr).toLocaleDateString('ar-EG', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
+import { useLanguage } from '../hooks/useLanguage'
 
 function InfoRow({ icon: Icon, label, value }) {
   return (
@@ -42,7 +34,19 @@ function InfoRow({ icon: Icon, label, value }) {
 
 export default function AccountPage() {
   const { user, profile, signOut } = useAuth()
+  const { t, dir, language } = useLanguage()
   const navigate = useNavigate()
+
+  // STAGE 30 — the date locale now follows the active language (was
+  // hardcoded 'ar-EG'), so "member since" reads naturally in English too.
+  function formatDate(dateStr) {
+    if (!dateStr) return null
+    return new Date(dateStr).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-GB', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+  }
 
   async function handleLogout() {
     try {
@@ -55,28 +59,28 @@ export default function AccountPage() {
   const memberSince = formatDate(profile?.created_at)
 
   return (
-    <div dir="rtl" className="max-w-2xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">حسابي</h1>
+    <div dir={dir} className="max-w-2xl mx-auto px-4 py-10">
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('account.title')}</h1>
 
       <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-4">
-        <h2 className="text-sm font-bold text-gray-900 mb-2">بياناتي</h2>
-        <InfoRow icon={User} label="الاسم" value={profile?.full_name} />
-        <InfoRow icon={Mail} label="البريد الالكتروني" value={user?.email} />
-        <InfoRow icon={Phone} label="رقم الهاتف" value={profile?.phone} />
-        {memberSince && <InfoRow icon={CalendarDays} label="عضو منذ" value={memberSince} />}
+        <h2 className="text-sm font-bold text-gray-900 mb-2">{t('account.myInfo')}</h2>
+        <InfoRow icon={User} label={t('account.name')} value={profile?.full_name} />
+        <InfoRow icon={Mail} label={t('auth.email')} value={user?.email} />
+        <InfoRow icon={Phone} label={t('auth.phone')} value={profile?.phone} />
+        {memberSince && <InfoRow icon={CalendarDays} label={t('account.memberSince')} value={memberSince} />}
       </div>
 
       <button
         onClick={() => navigate('/account/orders')}
-        className="w-full flex items-center justify-between bg-white border border-gray-100 rounded-2xl p-5 mb-4 hover:border-brand-gold/40 transition-colors text-right"
+        className={`w-full flex items-center justify-between bg-white border border-gray-100 rounded-2xl p-5 mb-4 hover:border-brand-gold/40 transition-colors ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
       >
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-brand-light flex items-center justify-center text-brand-gold shrink-0">
             <PackageSearch size={16} />
           </div>
-          <span className="text-sm font-medium text-gray-900">طلباتي</span>
+          <span className="text-sm font-medium text-gray-900">{t('account.myOrders')}</span>
         </div>
-        <ChevronLeft size={18} className="text-gray-300" />
+        <ChevronLeft size={18} className={`text-gray-300 ${dir === 'ltr' ? 'rotate-180' : ''}`} />
       </button>
 
       <button
@@ -86,7 +90,7 @@ export default function AccountPage() {
         <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
           <LogOut size={16} />
         </div>
-        <span className="text-sm font-medium">تسجيل الخروج</span>
+        <span className="text-sm font-medium">{t('nav.logout')}</span>
       </button>
     </div>
   )

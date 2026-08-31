@@ -6,6 +6,7 @@ import { Link, useParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
 import NotFoundPage from './NotFoundPage'
 import { useCategoryPage } from '../hooks/useCategories'
+import { useLanguage } from '../hooks/useLanguage'
 
 function ProductGridSkeleton() {
   return (
@@ -26,6 +27,7 @@ function ProductGridSkeleton() {
 export default function CategoryPage() {
   const { slug } = useParams()
   const { category, products, loading, error, notFound } = useCategoryPage(slug)
+  const { t } = useLanguage()
 
   // Invalid/deactivated category slug — same "not found" experience as a
   // bad route, rendered inline (no redirect) so the URL stays intact.
@@ -40,10 +42,26 @@ export default function CategoryPage() {
         </>
       ) : error ? (
         <div className="py-16 text-center">
-          <p className="text-sm text-red-500">حدث خطأ أثناء تحميل التصنيف</p>
+          <p className="text-sm text-red-500">{t('category.loadError')}</p>
         </div>
       ) : (
         <>
+          {/* STAGE 30 — admin-managed category image (Admin > Categories).
+              Purely additive: categories without an image simply skip this
+              block and fall back to the plain text header, same as before. */}
+          {category.imageUrl && (
+            <div className="mb-6 rounded-2xl overflow-hidden aspect-[21/9] sm:aspect-[3/1] bg-gray-100">
+              <img
+                src={category.imageUrl}
+                alt={category.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
+            </div>
+          )}
+
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900">{category.name}</h1>
             {category.description && (
@@ -67,7 +85,7 @@ export default function CategoryPage() {
 
           {products.length === 0 ? (
             <div className="py-16 text-center">
-              <p className="text-sm text-gray-400">لا توجد منتجات في هذا التصنيف حاليا</p>
+              <p className="text-sm text-gray-400">{t('category.noProducts')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">

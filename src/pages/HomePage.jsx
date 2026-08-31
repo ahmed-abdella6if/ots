@@ -5,8 +5,9 @@
 // active promotions) in a single parallel batch.
 
 import { useEffect, useState } from 'react'
-import { Link, useOutletContext } from 'react-router-dom'
+import { Link, useLocation, useOutletContext } from 'react-router-dom'
 import { Tag } from 'lucide-react'
+import { useLanguage } from '../hooks/useLanguage'
 import HeroSection from '../components/HeroSection'
 import CategoryCard from '../components/CategoryCard'
 import ProductCard from '../components/ProductCard'
@@ -51,6 +52,8 @@ function SectionTitle({ children }) {
 
 export default function HomePage() {
   const { storeSettings, categories } = useOutletContext() ?? { storeSettings: null, categories: [] }
+  const location = useLocation()
+  const { t } = useLanguage()
 
   const [homepageContent, setHomepageContent] = useState(null)
   const [products, setProducts] = useState([])
@@ -58,6 +61,17 @@ export default function HomePage() {
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+
+  // STAGE 30 — supports HeroSection's "تسوق الان" default (/#shop-categories):
+  // React Router doesn't scroll to a hash target itself (that's native
+  // full-page-load behavior only), so once the categories section exists in
+  // the DOM, scroll to it manually if that's the hash we landed on.
+  useEffect(() => {
+    if (location.hash !== '#shop-categories') return
+    if (loading) return
+    const target = document.getElementById('shop-categories')
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [location.hash, loading])
 
   useEffect(() => {
     let isMounted = true
@@ -97,11 +111,7 @@ export default function HomePage() {
 
   return (
     <div>
-      <HeroSection
-        homepageContent={homepageContent}
-        storeSettings={storeSettings}
-        fallbackCategorySlug={categories[0]?.slug}
-      />
+      <HeroSection homepageContent={homepageContent} storeSettings={storeSettings} />
 
       {/* البانرات */}
       {!loading && banners.length > 0 && (
@@ -136,8 +146,8 @@ export default function HomePage() {
 
       {/* التصنيفات */}
       {(loading || categories.length > 0) && (
-        <section className="max-w-6xl mx-auto px-4 py-10">
-          <SectionTitle>تسوق حسب التصنيف</SectionTitle>
+        <section id="shop-categories" className="max-w-6xl mx-auto px-4 py-10 scroll-mt-20">
+          <SectionTitle>{t('home.shopByCategory')}</SectionTitle>
           {categories.length === 0 ? (
             <CategoryGridSkeleton />
           ) : (
@@ -153,7 +163,7 @@ export default function HomePage() {
       {/* المنتجات المميزة */}
       {!loading && featuredProducts.length > 0 && (
         <section className="max-w-6xl mx-auto px-4 py-10">
-          <SectionTitle>منتجات مميزة</SectionTitle>
+          <SectionTitle>{t('home.featuredProducts')}</SectionTitle>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {featuredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
@@ -164,13 +174,13 @@ export default function HomePage() {
 
       {/* الاكثر مبيعا */}
       <section className="max-w-6xl mx-auto px-4 py-10">
-        <SectionTitle>الاكثر مبيعا</SectionTitle>
+        <SectionTitle>{t('home.bestSellers')}</SectionTitle>
         {loading ? (
           <ProductGridSkeleton />
         ) : error ? (
-          <p className="text-sm text-red-500 py-6 text-center">حدث خطا اثناء تحميل المنتجات</p>
+          <p className="text-sm text-red-500 py-6 text-center">{t('home.productsLoadError')}</p>
         ) : bestSellers.length === 0 ? (
-          <p className="text-sm text-gray-400 py-6 text-center">لا توجد منتجات مميزة حاليا</p>
+          <p className="text-sm text-gray-400 py-6 text-center">{t('home.noFeaturedProducts')}</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {bestSellers.map((product) => (
@@ -182,13 +192,13 @@ export default function HomePage() {
 
       {/* وصل حديثا */}
       <section className="max-w-6xl mx-auto px-4 py-10">
-        <SectionTitle>وصل حديثا</SectionTitle>
+        <SectionTitle>{t('home.newArrivals')}</SectionTitle>
         {loading ? (
           <ProductGridSkeleton />
         ) : error ? (
-          <p className="text-sm text-red-500 py-6 text-center">حدث خطا اثناء تحميل المنتجات</p>
+          <p className="text-sm text-red-500 py-6 text-center">{t('home.productsLoadError')}</p>
         ) : newArrivals.length === 0 ? (
-          <p className="text-sm text-gray-400 py-6 text-center">لا توجد منتجات حاليا</p>
+          <p className="text-sm text-gray-400 py-6 text-center">{t('home.noProducts')}</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {newArrivals.map((product) => (
@@ -201,7 +211,7 @@ export default function HomePage() {
       {/* العروض */}
       {!loading && promotions.length > 0 && (
         <section className="max-w-6xl mx-auto px-4 py-10">
-          <SectionTitle>العروض الحالية</SectionTitle>
+          <SectionTitle>{t('home.currentOffers')}</SectionTitle>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {promotions.map((promo) => (
               <div
@@ -216,8 +226,8 @@ export default function HomePage() {
                     {promo.code}
                   </p>
                   <p className="text-xs text-gray-600 mt-0.5">
-                    خصم {promo.discountType === 'percentage' ? `${Number(promo.discountValue)}%` : formatKWD(promo.discountValue)}
-                    {promo.minOrderAmount > 0 && <> على طلبات {formatKWD(promo.minOrderAmount)} فأكثر</>}
+                    {t('home.discountPrefix')} {promo.discountType === 'percentage' ? `${Number(promo.discountValue)}%` : formatKWD(promo.discountValue)}
+                    {promo.minOrderAmount > 0 && <> {t('home.onOrdersOverSuffix', { amount: formatKWD(promo.minOrderAmount) })}</>}
                   </p>
                 </div>
               </div>

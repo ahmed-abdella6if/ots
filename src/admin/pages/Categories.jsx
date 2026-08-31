@@ -3,7 +3,7 @@
 // database itself also enforces this via an on-delete-restrict foreign key —
 // see deleteCategory() in categoryService.js).
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus,
   FolderX,
@@ -16,15 +16,29 @@ import {
   X,
   Eye,
   EyeOff,
+  UploadCloud,
+  ImageOff,
 } from 'lucide-react'
 import {
   getAllCategoriesForAdmin,
   getCategoryProductCounts,
   createCategory,
   updateCategory,
+  updateCategoryImage,
   toggleCategoryStatus,
   deleteCategory,
 } from '../../services/categoryService'
+import {
+  uploadSiteAsset,
+  deleteSiteAssetFile,
+  getSiteAssetPathFromPublicUrl,
+} from '../../services/storageService'
+
+// STAGE 30 — same limits as the existing product-image upload flow
+// (see admin/pages/ProductImages.jsx) so category images follow the same
+// rules admins already know.
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('ar-EG', {
@@ -59,9 +73,52 @@ function CategoryModal({ category, onClose, onSaved }) {
   )
   const [isActive, setIsActive] = useState(category?.isActive ?? true)
 
+  // STAGE 30 — category image (upload / replace / remove / preview).
+  // `currentImageUrl` is the already-saved image (if editing); `imageFile`
+  // is a newly selected, not-yet-uploaded file; `imageRemoved` flags that
+  // the admin cleared an existing image without picking a replacement.
+  // The actual upload only happens on submit (see handleSubmit) — for a
+  // brand-new category there's no categoryId to attach a storage path to
+  // until the category row itself has been created.
+  const [currentImageUrl, setCurrentImageUrl] = useState(category?.imageUrl || null)
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(category?.imageUrl || null)
+  const [imageRemoved, setImageRemoved] = useState(false)
+  const [imageError, setImageError] = useState('')
+  const fileInputRef = useRef(null)
+
   const [fieldErrors, setFieldErrors] = useState({})
   const [submitError, setSubmitError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  function handleImageSelected(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setImageError('نوع الملف غير مدعوم (JPG, PNG, WEBP فقط)')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setImageError('حجم الملف اكبر من 5 ميجابايت')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
+    setImageError('')
+    setImageRemoved(false)
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
+  function handleRemoveImage() {
+    setImageFile(null)
+    setImagePreview(null)
+    setImageError('')
+    if (currentImageUrl) setImageRemoved(true)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   function validate() {
     const errors = {}
@@ -94,9 +151,35 @@ function CategoryModal({ category, onClose, onSaved }) {
         isActive,
       }
 
-      const saved = isEditMode
+      let saved = isEditMode
         ? await updateCategory(category.id, payload)
         : await createCategory(payload)
+
+      // STAGE 30 — image upload/replace/remove happens after the category
+      // itself is saved (so a brand-new category has an id to attach the
+      // storage path to). A failure here doesn't roll back the name/
+      // description/status save above — it's reported separately so the
+      // admin knows exactly what didn't go through.
+      try {
+        if (imageFile) {
+          const { publicUrl } = await uploadSiteAsset(`categories/${saved.id}`, imageFile)
+          saved = await updateCategoryImage(saved.id, publicUrl)
+          if (currentImageUrl) {
+            const oldPath = getSiteAssetPathFromPublicUrl(currentImageUrl)
+            if (oldPath) deleteSiteAssetFile(oldPath).catch(() => {})
+          }
+        } else if (imageRemoved && currentImageUrl) {
+          saved = await updateCategoryImage(saved.id, null)
+          const oldPath = getSiteAssetPathFromPublicUrl(currentImageUrl)
+          if (oldPath) deleteSiteAssetFile(oldPath).catch(() => {})
+        }
+      } catch (imgErr) {
+        console.error('Failed to save category image:', imgErr.message)
+        setSubmitError('تم حفظ التصنيف، لكن تعذر حفظ الصورة')
+        setSubmitting(false)
+        onSaved(saved, isEditMode)
+        return
+      }
 
       onSaved(saved, isEditMode)
     } catch (err) {
@@ -158,6 +241,51 @@ function CategoryModal({ category, onClose, onSaved }) {
                 الرابط الحالي (slug) سيبقى كما هو: <span dir="ltr">{category.slug}</span>
               </p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">صورة التصنيف</label>
+            <div className="flex items-center gap-3">
+              <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center">
+                {imagePreview ? (
+                  <img src={imagePreview} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <ImageOff size={20} className="text-gray-300" />
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={submitting}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors disabled:opacity-60"
+                  >
+                    <UploadCloud size={14} />
+                    <span>{imagePreview ? 'تغيير الصورة' : 'رفع صورة'}</span>
+                  </button>
+                  {imagePreview && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      disabled={submitting}
+                      className="text-xs font-medium text-red-500 hover:text-red-600 disabled:opacity-60 transition-colors"
+                    >
+                      حذف الصورة
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImageSelected}
+                  className="hidden"
+                />
+                <p className="text-xs text-gray-400">JPG, PNG او WEBP بحد اقصى 5 ميجابايت</p>
+                {imageError && <p className="text-xs text-red-500">{imageError}</p>}
+              </div>
+            </div>
           </div>
 
           <div>

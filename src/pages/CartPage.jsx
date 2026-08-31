@@ -6,10 +6,12 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Minus, Plus, Trash2, ShoppingBag, Info } from 'lucide-react'
 import { useCart } from '../hooks/useCart'
+import { useLanguage } from '../hooks/useLanguage'
 import { formatKWD } from '../utils/formatPrice'
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, subtotal } = useCart()
+  const { t } = useLanguage()
   // Stage 17 — optional one-time notice from MyOrderDetailPage's "إعادة
   // الطلب" when only some items from the original order could be re-added.
   const notice = useLocation().state?.notice
@@ -20,13 +22,13 @@ export default function CartPage() {
         <div className="w-16 h-16 rounded-2xl bg-brand-light flex items-center justify-center mx-auto text-brand-gold">
           <ShoppingBag size={28} />
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mt-6">السلة فارغة</h1>
-        <p className="text-sm text-gray-500 mt-2">لم تقم بإضافة أي منتجات إلى السلة بعد</p>
+        <h1 className="text-xl font-bold text-gray-900 mt-6">{t('cart.empty')}</h1>
+        <p className="text-sm text-gray-500 mt-2">{t('cart.emptyHint')}</p>
         <Link
           to="/"
           className="inline-block mt-6 bg-brand text-white rounded-xl px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
         >
-          تصفح المنتجات
+          {t('cart.browseProducts')}
         </Link>
       </div>
     )
@@ -34,7 +36,7 @@ export default function CartPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">سلة التسوق</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-8">{t('cart.title')}</h1>
 
       {notice && (
         <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 rounded-xl px-4 py-3 mb-6">
@@ -78,7 +80,7 @@ export default function CartPage() {
                       onClick={() => updateQuantity(item.key, item.quantity - 1)}
                       disabled={item.quantity <= 1}
                       className="p-2 text-gray-600 hover:text-brand-gold disabled:opacity-30 transition-colors"
-                      aria-label="تقليل الكمية"
+                      aria-label={t('cart.decreaseQty')}
                     >
                       <Minus size={14} />
                     </button>
@@ -87,7 +89,7 @@ export default function CartPage() {
                       onClick={() => updateQuantity(item.key, item.quantity + 1)}
                       disabled={item.maxStock != null && item.quantity >= item.maxStock}
                       className="p-2 text-gray-600 hover:text-brand-gold disabled:opacity-30 transition-colors"
-                      aria-label="زيادة الكمية"
+                      aria-label={t('cart.increaseQty')}
                     >
                       <Plus size={14} />
                     </button>
@@ -96,7 +98,7 @@ export default function CartPage() {
                   <button
                     onClick={() => removeItem(item.key)}
                     className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                    aria-label="إزالة من السلة"
+                    aria-label={t('cart.removeFromCart')}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -108,15 +110,15 @@ export default function CartPage() {
 
         <div className="rounded-2xl border border-gray-100 p-5 h-fit">
           <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>الإجمالي الفرعي</span>
+            <span>{t('cart.subtotal')}</span>
             <span className="font-bold text-gray-900">{formatKWD(subtotal)}</span>
           </div>
-          <p className="text-xs text-gray-400 mt-2">يتم احتساب الشحن والخصومات عند إتمام الطلب</p>
+          <p className="text-xs text-gray-400 mt-2">{t('cart.shippingNote')}</p>
           <Link
             to="/checkout"
             className="block text-center mt-5 bg-brand text-white rounded-xl px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
           >
-            إتمام الطلب
+            {t('cart.checkout')}
           </Link>
         </div>
       </div>

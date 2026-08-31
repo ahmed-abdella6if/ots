@@ -18,12 +18,14 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CheckCircle2, XCircle, Loader2, AlertCircle } from 'lucide-react'
 import { verifyMyFatoorahPayment } from '../services/paymentService'
 import { getOrderForSuccessPage } from '../services/orderService'
+import { useLanguage } from '../hooks/useLanguage'
 
 export default function OrderPaymentReturnPage() {
   const { orderId } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const paymentId = searchParams.get('paymentId')
+  const { t, dir } = useLanguage()
 
   const [status, setStatus] = useState('checking') // checking | paid | failed | error
   const [message, setMessage] = useState('')
@@ -35,7 +37,7 @@ export default function OrderPaymentReturnPage() {
     async function run() {
       if (!paymentId) {
         setStatus('error')
-        setMessage('لم يتم استلام بيانات الدفع من MyFatoorah')
+        setMessage(t('payment.noDataReceived'))
         return
       }
 
@@ -50,13 +52,13 @@ export default function OrderPaymentReturnPage() {
             .catch(() => {})
         } else {
           setStatus('failed')
-          setMessage(result.message || 'لم يتم إتمام الدفع')
+          setMessage(result.message || t('payment.notCompleted'))
         }
       } catch (err) {
         if (!isMounted) return
         console.error('Payment verification failed:', err.message)
         setStatus('error')
-        setMessage(err.message || 'تعذر التحقق من حالة الدفع')
+        setMessage(err.message || t('payment.verifyFailed'))
       }
     }
 
@@ -68,22 +70,22 @@ export default function OrderPaymentReturnPage() {
 
   if (status === 'checking') {
     return (
-      <div dir="rtl" className="min-h-[60vh] flex flex-col items-center justify-center gap-3 text-gray-500">
+      <div dir={dir} className="min-h-[60vh] flex flex-col items-center justify-center gap-3 text-gray-500">
         <Loader2 size={24} className="animate-spin" />
-        <span>...جاري التحقق من حالة الدفع</span>
+        <span>{t('payment.checkingStatus')}</span>
       </div>
     )
   }
 
   if (status === 'paid') {
     return (
-      <div dir="rtl" className="max-w-md mx-auto px-4 py-24 text-center">
+      <div dir={dir} className="max-w-md mx-auto px-4 py-24 text-center">
         <div className="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center mx-auto text-green-600">
           <CheckCircle2 size={32} />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mt-6">تم الدفع بنجاح</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mt-6">{t('payment.successTitle')}</h1>
         <p className="text-sm text-gray-500 mt-2">
-          شكرا لك{order?.customerName ? ` ${order.customerName}` : ''}، تم تأكيد طلبك وسنبدأ تجهيزه
+          {t('payment.successThankYou', { name: order?.customerName ? ` ${order.customerName}` : '' })}
         </p>
         {order?.orderNumber && (
           <p dir="ltr" className="text-sm font-bold text-gray-900 mt-4">
@@ -95,13 +97,13 @@ export default function OrderPaymentReturnPage() {
             to="/"
             className="bg-brand text-white rounded-xl px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
           >
-            العودة للرئيسية
+            {t('error.backHome')}
           </Link>
           <Link
             to="/account/orders"
             className="border border-gray-200 text-gray-700 rounded-xl px-6 py-3 text-sm font-medium hover:bg-gray-50 transition-colors"
           >
-            طلباتي
+            {t('account.myOrders')}
           </Link>
         </div>
       </div>
@@ -111,27 +113,27 @@ export default function OrderPaymentReturnPage() {
   // 'failed' (payment not completed) or 'error' (couldn't verify) — same
   // recovery UI either way: keep the order, offer a retry, never claim success.
   return (
-    <div dir="rtl" className="max-w-md mx-auto px-4 py-24 text-center">
+    <div dir={dir} className="max-w-md mx-auto px-4 py-24 text-center">
       <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto text-red-500">
         {status === 'failed' ? <XCircle size={32} /> : <AlertCircle size={32} />}
       </div>
       <h1 className="text-2xl font-bold text-gray-900 mt-6">
-        {status === 'failed' ? 'لم يتم إتمام الدفع' : 'تعذر التحقق من الدفع'}
+        {status === 'failed' ? t('payment.notCompleted') : t('payment.cannotVerifyTitle')}
       </h1>
       <p className="text-sm text-gray-500 mt-2">{message}</p>
-      <p className="text-xs text-gray-400 mt-2">طلبك محفوظ، يمكنك المحاولة مرة أخرى في أي وقت</p>
+      <p className="text-xs text-gray-400 mt-2">{t('payment.orderSavedHint')}</p>
       <div className="flex items-center justify-center gap-3 mt-8">
         <button
           onClick={() => navigate(`/order-payment/${orderId}`)}
           className="bg-brand text-white rounded-xl px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity"
         >
-          إعادة محاولة الدفع
+          {t('payment.retryPayment')}
         </button>
         <Link
           to="/account/orders"
           className="border border-gray-200 text-gray-700 rounded-xl px-6 py-3 text-sm font-medium hover:bg-gray-50 transition-colors"
         >
-          طلباتي
+          {t('account.myOrders')}
         </Link>
       </div>
     </div>
