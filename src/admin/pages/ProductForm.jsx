@@ -40,6 +40,7 @@ export default function ProductForm() {
   const [categoriesError, setCategoriesError] = useState(false)
 
   const [name, setName] = useState('')
+  const [nameEn, setNameEn] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -101,6 +102,7 @@ export default function ProductForm() {
       .then(([product, images]) => {
         if (!isMounted) return
         setName(product.name)
+        setNameEn(product.nameEn || '')
         setDescription(product.description)
         setPrice(String(product.basePrice))
         setCategoryId(product.categoryId || '')
@@ -274,6 +276,7 @@ export default function ProductForm() {
     try {
       createdProduct = await createProduct({
         name,
+        nameEn,
         description,
         basePrice: Number(price),
         categoryId,
@@ -320,6 +323,7 @@ export default function ProductForm() {
     try {
       await updateProduct(productId, {
         name,
+        nameEn,
         description,
         basePrice: Number(price),
         categoryId,
@@ -482,6 +486,24 @@ export default function ProductForm() {
               placeholder="مثال: طقم نسائي قطن"
             />
             {fieldErrors.name && <p className="text-xs text-red-500 mt-1">{fieldErrors.name}</p>}
+          </div>
+
+          <div>
+            <label htmlFor="nameEn" className="block text-sm font-medium text-gray-700 mb-1.5">
+              الاسم بالانجليزية (اختياري)
+            </label>
+            <input
+              id="nameEn"
+              type="text"
+              dir="ltr"
+              value={nameEn}
+              onChange={(e) => setNameEn(e.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition-colors focus:ring-2 focus:ring-brand-gold/40 focus:border-brand-gold"
+              placeholder="e.g. Cotton Set"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              يظهر للعميل عند التصفح بالانجليزية. اذا تُرك فارغا يظهر الاسم بالعربي بدلا منه.
+            </p>
           </div>
 
           <div>

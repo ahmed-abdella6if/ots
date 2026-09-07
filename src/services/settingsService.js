@@ -17,7 +17,7 @@
 import { supabase } from '../lib/supabaseClient'
 
 const STORE_SETTINGS_COLUMNS =
-  'brand_name, logo_url, contact_email, contact_phone, whatsapp_number, social_links, payment_policy, shipping_policy, return_policy, about_us, default_shipping_cost, free_shipping_enabled, free_shipping_min_order_amount'
+  'brand_name, logo_url, contact_email, contact_phone, whatsapp_number, social_links, payment_policy, payment_policy_en, shipping_policy, shipping_policy_en, return_policy, return_policy_en, privacy_policy, privacy_policy_en, about_us, default_shipping_cost, free_shipping_enabled, free_shipping_min_order_amount'
 
 function mapStoreSettingsRow(data) {
   return {
@@ -28,8 +28,13 @@ function mapStoreSettingsRow(data) {
     whatsappNumber: data.whatsapp_number,
     socialLinks: data.social_links || {},
     paymentPolicy: data.payment_policy,
+    paymentPolicyEn: data.payment_policy_en,
     shippingPolicy: data.shipping_policy,
+    shippingPolicyEn: data.shipping_policy_en,
     returnPolicy: data.return_policy,
+    returnPolicyEn: data.return_policy_en,
+    privacyPolicy: data.privacy_policy,
+    privacyPolicyEn: data.privacy_policy_en,
     aboutUs: data.about_us,
     defaultShippingCost: data.default_shipping_cost,
     // STAGE 21 — free shipping rule (see supabase/migrations/20260825_free_shipping_settings.sql)
@@ -76,8 +81,13 @@ export async function updateStoreSettings({
   whatsappNumber,
   socialLinks,
   paymentPolicy,
+  paymentPolicyEn,
   shippingPolicy,
+  shippingPolicyEn,
   returnPolicy,
+  returnPolicyEn,
+  privacyPolicy,
+  privacyPolicyEn,
   aboutUs,
   defaultShippingCost,
   freeShippingEnabled,
@@ -93,8 +103,13 @@ export async function updateStoreSettings({
       whatsapp_number: whatsappNumber?.trim() || null,
       social_links: socialLinks || {},
       payment_policy: paymentPolicy?.trim() || null,
+      payment_policy_en: paymentPolicyEn?.trim() || null,
       shipping_policy: shippingPolicy?.trim() || null,
+      shipping_policy_en: shippingPolicyEn?.trim() || null,
       return_policy: returnPolicy?.trim() || null,
+      return_policy_en: returnPolicyEn?.trim() || null,
+      privacy_policy: privacyPolicy?.trim() || null,
+      privacy_policy_en: privacyPolicyEn?.trim() || null,
       about_us: aboutUs?.trim() || null,
       default_shipping_cost: defaultShippingCost ?? 0,
       free_shipping_enabled: freeShippingEnabled ?? false,

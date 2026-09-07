@@ -6,7 +6,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { Plus, PackageX, CheckCircle2, AlertTriangle } from 'lucide-react'
 import ProductFilters from '../components/ProductFilters'
 import ProductTable from '../components/ProductTable'
-import { getProducts } from '../../services/productService'
+import { getProducts, toggleProductBestseller } from '../../services/productService'
 
 function ProductRowSkeleton() {
   return (
@@ -33,6 +33,25 @@ export default function Products() {
 
   const [successMessage, setSuccessMessage] = useState(location.state?.successMessage || '')
   const [imageWarning, setImageWarning] = useState(location.state?.imageWarning || '')
+  const [togglingBestsellerIds, setTogglingBestsellerIds] = useState(new Set())
+
+  async function handleToggleBestseller(product) {
+    setTogglingBestsellerIds((prev) => new Set(prev).add(product.id))
+    try {
+      const updated = await toggleProductBestseller(product.id, !product.isBestseller)
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, isBestseller: updated.isBestseller } : p))
+      )
+    } catch (err) {
+      console.error('Failed to toggle bestseller:', err.message)
+    } finally {
+      setTogglingBestsellerIds((prev) => {
+        const next = new Set(prev)
+        next.delete(product.id)
+        return next
+      })
+    }
+  }
 
   useEffect(() => {
     if (!successMessage) return
@@ -186,7 +205,11 @@ export default function Products() {
             لا توجد نتائج مطابقة لبحثك
           </p>
         ) : (
-          <ProductTable products={filteredProducts} />
+          <ProductTable
+            products={filteredProducts}
+            onToggleBestseller={handleToggleBestseller}
+            togglingBestsellerIds={togglingBestsellerIds}
+          />
         )}
       </div>
     </div>

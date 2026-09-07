@@ -1,14 +1,14 @@
-// سياسة الشحن — Shipping policy page, content from store_settings.shipping_policy.
-// The policy text itself is admin-entered business content (store_settings),
-// so it is NOT translated — only the page chrome (heading, loading/error/
-// empty states) follows the active language.
+// سياسة الشحن — Shipping policy page, content from store_settings.shipping_policy
+// (shippingPolicyEn for English, falling back to the Arabic text when no
+// translation has been entered — same fallback pattern as product/category
+// names, see getLocalizedName.js).
 
 import { useEffect, useState } from 'react'
 import { getStoreSettings } from '../services/settingsService'
 import { useLanguage } from '../hooks/useLanguage'
 
 export default function PolicyShippingPage() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [content, setContent] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -17,7 +17,7 @@ export default function PolicyShippingPage() {
     let isMounted = true
     getStoreSettings()
       .then((data) => {
-        if (isMounted) setContent(data?.shippingPolicy || '')
+        if (isMounted) setContent((language === 'en' ? data?.shippingPolicyEn : null) || data?.shippingPolicy || '')
       })
       .catch((err) => {
         console.error('Failed to load shipping policy:', err.message)
@@ -29,7 +29,7 @@ export default function PolicyShippingPage() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [language])
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">

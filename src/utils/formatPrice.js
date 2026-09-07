@@ -9,12 +9,16 @@
 // avoid a stale/duplicate formatter being reused by mistake.
 
 /**
- * Formats a numeric amount as a Kuwaiti Dinar price string, e.g. "12.500 د.ك".
- * KWD conventionally uses 3 decimal places (fils).
+ * Formats a numeric amount as a Kuwaiti Dinar price string, e.g. "12.500 د.ك"
+ * (or "12.500 KD" when `language` is 'en'). KWD conventionally uses 3
+ * decimal places (fils). `language` is optional and defaults to 'ar' so
+ * every pre-existing call site (admin pages, which have no language
+ * switcher) keeps showing the Arabic currency label unchanged.
  * @param {number|string|null|undefined} amount
+ * @param {'ar'|'en'} [language='ar']
  * @returns {string}
  */
-export function formatKWD(amount) {
+export function formatKWD(amount, language = 'ar') {
   const num = Number(amount)
   if (amount === null || amount === undefined || Number.isNaN(num)) return '—'
 
@@ -23,5 +27,5 @@ export function formatKWD(amount) {
     maximumFractionDigits: 3,
   })
 
-  return `${formatted} د.ك`
+  return `${formatted} ${language === 'en' ? 'KD' : 'د.ك'}`
 }

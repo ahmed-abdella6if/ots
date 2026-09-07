@@ -117,7 +117,7 @@ function TextInput({ id, error, ...props }) {
 export default function CheckoutPage() {
   const { items: cartItems, clearCart } = useCart()
   const { user, profile } = useAuth()
-  const { t, dir } = useLanguage()
+  const { t, dir, language } = useLanguage()
   const navigate = useNavigate()
 
   const [validatedItems, setValidatedItems] = useState(null) // null = still loading
@@ -141,11 +141,11 @@ export default function CheckoutPage() {
   const [discountChecking, setDiscountChecking] = useState(false)
   const [discountError, setDiscountError] = useState('')
 
-  // STAGE 18 — payment method. 'online' (MyFatoorah) is the default; 'cod'
-  // keeps the exact Stage 15 behavior (order created with payment_status
-  // 'pending', no gateway involved, admin marks it paid on delivery via
-  // the existing Admin OrderDetail payment-status control).
-  const [paymentMethod, setPaymentMethod] = useState('online')
+  // Online payment (MyFatoorah) is temporarily disabled — cash on delivery
+  // is the only method offered. The online option is still shown, disabled,
+  // with an explanatory note (see checkout.onlinePaymentUnavailable) rather
+  // than removed outright, so re-enabling it later is a one-line change.
+  const paymentMethod = 'cod'
 
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -203,7 +203,6 @@ export default function CheckoutPage() {
 
   const okItems = useMemo(() => (validatedItems || []).filter((i) => i.ok), [validatedItems])
   const badItems = useMemo(() => (validatedItems || []).filter((i) => !i.ok), [validatedItems])
-  const hasVariantlessItem = useMemo(() => okItems.some((i) => !i.variantId), [okItems])
 
   const subtotal = useMemo(
     () => Math.round(okItems.reduce((sum, i) => sum + i.lineTotal, 0) * 100) / 100,
@@ -260,7 +259,6 @@ export default function CheckoutPage() {
     !isLoadingSummary &&
     cartItems.length > 0 &&
     badItems.length === 0 &&
-    !hasVariantlessItem &&
     okItems.length > 0
 
   async function handleApplyDiscount(e) {
@@ -321,10 +319,6 @@ export default function CheckoutPage() {
         setSubmitError(t('checkout.noValidItemsError'))
         return
       }
-      if (freshOk.some((i) => !i.variantId)) {
-        setSubmitError(t('checkout.itemNotReadyError'))
-        return
-      }
 
       const freshSubtotal = Math.round(freshOk.reduce((sum, i) => sum + i.lineTotal, 0) * 100) / 100
 
@@ -360,14 +354,9 @@ export default function CheckoutPage() {
       // exists at this point either way.
       clearCart()
 
-      if (paymentMethod === 'online') {
-        // Hand off to the dedicated payment page rather than redirecting to
-        // MyFatoorah inline here — that page is also the retry entry point
-        // from MyOrderDetailPage, so this keeps a single implementation.
-        navigate(`/order-payment/${order.id}`)
-      } else {
-        navigate(`/order-success/${order.id}`, { state: { order } })
-      }
+      // Online payment is disabled for now (see paymentMethod above) — every
+      // order goes straight to the success page, cash on delivery.
+      navigate(`/order-success/${order.id}`, { state: { order } })
     } catch (err) {
       console.error('Order creation failed:', err?.message || err)
       if (err?.code === 'INSUFFICIENT_STOCK') {
@@ -549,9 +538,9 @@ export default function CheckoutPage() {
                     )}
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-xs text-gray-500">
-                        {item.quantity} × {formatKWD(item.unitPrice)}
+                        {item.quantity} × {formatKWD(item.unitPrice, language)}
                       </span>
-                      <span className="text-sm font-bold text-gray-900">{formatKWD(item.lineTotal)}</span>
+                      <span className="text-sm font-bold text-gray-900">{formatKWD(item.lineTotal, language)}</span>
                     </div>
                   </div>
                 </div>
@@ -571,13 +560,6 @@ export default function CheckoutPage() {
                   </span>
                 </div>
               ))}
-
-              {!hasVariantlessItem ? null : (
-                <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 rounded-xl px-3 py-2.5">
-                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                  <span>{t('checkout.itemNotReadyHint')}</span>
-                </div>
-              )}
             </div>
           )}
 
@@ -631,36 +613,32 @@ export default function CheckoutPage() {
             <h3 className="text-sm font-bold text-gray-900 mb-1">{t('checkout.paymentMethod')}</h3>
 
             <label
-              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
-                paymentMethod === 'online' ? 'border-brand-gold bg-brand-light/40' : 'border-gray-200'
-              }`}
+              aria-disabled="true"
+              className="flex items-center gap-3 rounded-xl border px-3 py-2.5 border-gray-200 opacity-50 cursor-not-allowed"
             >
               <input
                 type="radio"
                 name="paymentMethod"
                 value="online"
-                checked={paymentMethod === 'online'}
-                onChange={() => setPaymentMethod('online')}
+                checked={false}
+                disabled
+                readOnly
                 className="accent-brand-gold"
               />
               <CreditCard size={18} className="text-gray-500 shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-900">{t('checkout.onlinePayment')}</p>
-                <p className="text-xs text-gray-500">KNET، فيزا/ماستركارد وطرق أخرى عبر MyFatoorah</p>
+                <p className="text-xs text-gray-500">{t('checkout.onlinePaymentUnavailable')}</p>
               </div>
             </label>
 
-            <label
-              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
-                paymentMethod === 'cod' ? 'border-brand-gold bg-brand-light/40' : 'border-gray-200'
-              }`}
-            >
+            <label className="flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-default border-brand-gold bg-brand-light/40">
               <input
                 type="radio"
                 name="paymentMethod"
                 value="cod"
                 checked={paymentMethod === 'cod'}
-                onChange={() => setPaymentMethod('cod')}
+                readOnly
                 className="accent-brand-gold"
               />
               <Truck size={18} className="text-gray-500 shrink-0" />
@@ -674,17 +652,17 @@ export default function CheckoutPage() {
           <div className="border-t border-gray-100 pt-4 space-y-2 text-sm">
             <div className="flex items-center justify-between text-gray-600">
               <span>{t('checkout.subtotal')}</span>
-              <span className="text-gray-900">{formatKWD(subtotal)}</span>
+              <span className="text-gray-900">{formatKWD(subtotal, language)}</span>
             </div>
             {discountAmount > 0 && (
               <div className="flex items-center justify-between text-brand-gold">
                 <span>{t('checkout.discount')}</span>
-                <span>- {formatKWD(discountAmount)}</span>
+                <span>- {formatKWD(discountAmount, language)}</span>
               </div>
             )}
             <div className="flex items-center justify-between text-gray-600">
               <span>{t('checkout.shipping')}</span>
-              <span className="text-gray-900">{shippingCost > 0 ? formatKWD(shippingCost) : t('checkout.freeShipping')}</span>
+              <span className="text-gray-900">{shippingCost > 0 ? formatKWD(shippingCost, language) : t('checkout.freeShipping')}</span>
             </div>
             {piecesToFreeShipping != null && (
               <p className="text-xs text-gray-400 -mt-1">
@@ -696,12 +674,12 @@ export default function CheckoutPage() {
             )}
             {amountToFreeShipping != null && (
               <p className="text-xs text-gray-400 -mt-1">
-                {t('checkout.moreAmountForFreeShipping', { amount: formatKWD(amountToFreeShipping) })}
+                {t('checkout.moreAmountForFreeShipping', { amount: formatKWD(amountToFreeShipping, language) })}
               </p>
             )}
             <div className="flex items-center justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
               <span>{t('checkout.total')}</span>
-              <span>{formatKWD(total)}</span>
+              <span>{formatKWD(total, language)}</span>
             </div>
           </div>
 
@@ -723,7 +701,7 @@ export default function CheckoutPage() {
                 <span>{t('checkout.creatingOrder')}</span>
               </>
             ) : (
-              <span>{paymentMethod === 'online' ? t('checkout.continueToPayment') : t('checkout.placeOrder')}</span>
+              <span>{t('checkout.placeOrder')}</span>
             )}
           </button>
         </div>

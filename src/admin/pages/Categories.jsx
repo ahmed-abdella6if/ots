@@ -67,6 +67,7 @@ function CategoryModal({ category, onClose, onSaved }) {
   const isEditMode = Boolean(category)
 
   const [name, setName] = useState(category?.name || '')
+  const [nameEn, setNameEn] = useState(category?.nameEn || '')
   const [description, setDescription] = useState(category?.description || '')
   const [sortOrder, setSortOrder] = useState(
     category?.sortOrder !== undefined && category?.sortOrder !== null ? String(category.sortOrder) : '0'
@@ -146,6 +147,7 @@ function CategoryModal({ category, onClose, onSaved }) {
     try {
       const payload = {
         name,
+        nameEn,
         description,
         sortOrder: sortOrder.trim() ? Number(sortOrder) : 0,
         isActive,
@@ -241,6 +243,21 @@ function CategoryModal({ category, onClose, onSaved }) {
                 الرابط الحالي (slug) سيبقى كما هو: <span dir="ltr">{category.slug}</span>
               </p>
             )}
+          </div>
+
+          <div>
+            <label htmlFor="cat-name-en" className="block text-sm font-medium text-gray-700 mb-1.5">
+              الاسم بالانجليزية (اختياري)
+            </label>
+            <input
+              id="cat-name-en"
+              type="text"
+              dir="ltr"
+              value={nameEn}
+              onChange={(e) => setNameEn(e.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition-colors focus:ring-2 focus:ring-brand-gold/40 focus:border-brand-gold"
+              placeholder="e.g. Men"
+            />
           </div>
 
           <div>

@@ -8,16 +8,18 @@
 // the footer's links for now rather than pointing to a route that doesn't exist.
 
 import { Link } from 'react-router-dom'
-import { Instagram, Facebook, MessageCircle } from 'lucide-react'
+import { Instagram, Facebook, Linkedin, MessageCircle } from 'lucide-react'
 import { useLanguage } from '../hooks/useLanguage'
+import { getLocalizedName } from '../utils/localizedName'
 
 const SOCIAL_ICONS = {
   instagram: Instagram,
   facebook: Facebook,
+  linkedin: Linkedin,
 }
 
 export default function Footer({ storeSettings, categories }) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const brandName = storeSettings?.brandName || 'المتجر'
   const socialLinks = storeSettings?.socialLinks || {}
   const whatsappNumber = storeSettings?.whatsappNumber
@@ -89,7 +91,7 @@ export default function Footer({ storeSettings, categories }) {
                     to={`/category/${cat.slug}`}
                     className="text-sm text-white/85 hover:text-brand-gold transition-colors"
                   >
-                    {cat.name}
+                    {getLocalizedName(cat, language)}
                   </Link>
                 </li>
               ))}
@@ -128,6 +130,15 @@ export default function Footer({ storeSettings, categories }) {
                 className="text-sm text-white/85 hover:text-brand-gold transition-colors"
               >
                 {t('footer.returnsPolicy')}
+              </Link>
+            </li>
+
+            <li>
+              <Link
+                to="/policies/privacy"
+                className="text-sm text-white/85 hover:text-brand-gold transition-colors"
+              >
+                {t('footer.privacyPolicy')}
               </Link>
             </li>
           </ul>

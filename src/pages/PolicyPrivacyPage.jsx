@@ -1,13 +1,14 @@
-// سياسة الدفع — Payment policy page, content from store_settings.payment_policy
-// (paymentPolicyEn for English, falling back to the Arabic text when no
-// translation has been entered — same fallback pattern as product/category
-// names, see getLocalizedName.js).
+// سياسة الخصوصية — Privacy policy page, content from
+// store_settings.privacy_policy (privacyPolicyEn for English, falling back
+// to the Arabic text when no translation has been entered — same fallback
+// pattern as product/category names, see getLocalizedName.js). Mirrors
+// PolicyPaymentPage.jsx.
 
 import { useEffect, useState } from 'react'
 import { getStoreSettings } from '../services/settingsService'
 import { useLanguage } from '../hooks/useLanguage'
 
-export default function PolicyPaymentPage() {
+export default function PolicyPrivacyPage() {
   const { t, language } = useLanguage()
   const [content, setContent] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -17,10 +18,10 @@ export default function PolicyPaymentPage() {
     let isMounted = true
     getStoreSettings()
       .then((data) => {
-        if (isMounted) setContent((language === 'en' ? data?.paymentPolicyEn : null) || data?.paymentPolicy || '')
+        if (isMounted) setContent((language === 'en' ? data?.privacyPolicyEn : null) || data?.privacyPolicy || '')
       })
       .catch((err) => {
-        console.error('Failed to load payment policy:', err.message)
+        console.error('Failed to load privacy policy:', err.message)
         if (isMounted) setError(true)
       })
       .finally(() => {
@@ -33,7 +34,7 @@ export default function PolicyPaymentPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('footer.paymentPolicy')}</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('footer.privacyPolicy')}</h1>
       {loading ? (
         <div className="space-y-2">
           <div className="h-4 w-full rounded bg-gray-100 animate-pulse" />

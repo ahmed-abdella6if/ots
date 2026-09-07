@@ -7,6 +7,7 @@ import ProductCard from '../components/ProductCard'
 import NotFoundPage from './NotFoundPage'
 import { useCategoryPage } from '../hooks/useCategories'
 import { useLanguage } from '../hooks/useLanguage'
+import { getLocalizedName } from '../utils/localizedName'
 
 function ProductGridSkeleton() {
   return (
@@ -27,7 +28,7 @@ function ProductGridSkeleton() {
 export default function CategoryPage() {
   const { slug } = useParams()
   const { category, products, loading, error, notFound } = useCategoryPage(slug)
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   // Invalid/deactivated category slug — same "not found" experience as a
   // bad route, rendered inline (no redirect) so the URL stays intact.
@@ -46,24 +47,8 @@ export default function CategoryPage() {
         </div>
       ) : (
         <>
-          {/* STAGE 30 — admin-managed category image (Admin > Categories).
-              Purely additive: categories without an image simply skip this
-              block and fall back to the plain text header, same as before. */}
-          {category.imageUrl && (
-            <div className="mb-6 rounded-2xl overflow-hidden aspect-[21/9] sm:aspect-[3/1] bg-gray-100">
-              <img
-                src={category.imageUrl}
-                alt={category.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none'
-                }}
-              />
-            </div>
-          )}
-
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">{category.name}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{getLocalizedName(category, language)}</h1>
             {category.description && (
               <p className="text-sm text-gray-500 mt-2 max-w-2xl">{category.description}</p>
             )}
@@ -77,7 +62,7 @@ export default function CategoryPage() {
                   to={`/category/${sub.slug}`}
                   className="px-4 py-2 rounded-full text-sm border border-gray-200 text-gray-700 hover:border-brand-gold hover:text-brand-gold transition-colors"
                 >
-                  {sub.name}
+                  {getLocalizedName(sub, language)}
                 </Link>
               ))}
             </div>

@@ -1,6 +1,8 @@
 // product_images row queries — kept separate from UI components.
 // Uses the existing product_images table and RLS only (no schema changes).
-// color_id is always null at this stage (colors are a later stage).
+// STAGE 31 — color_id is now settable per image (see addProductImage); the
+// admin UI groups images by color (admin/pages/ProductImages.jsx), and the
+// customer Product page already filtered by color_id since Stage 8/9.
 
 import { supabase } from '../lib/supabaseClient'
 import { uploadProductImage, deleteProductImageFile, getStoragePathFromPublicUrl } from './storageService'
@@ -32,21 +34,34 @@ export async function getProductImages(productId) {
 
 /**
  * Uploads a file to Storage and inserts the matching product_images row.
- * The first image ever added to a product is automatically set as primary.
+ * The first image ever added to a product (across all colors) is
+ * automatically set as primary.
+ *
+ * STAGE 31 — accepts an optional colorId to tag the image as belonging to
+ * one of the product's colors (product_images.color_id, already present in
+ * the schema since Stage 8/9 — no migration needed). Defaults to null
+ * (general/product-level image), preserving the exact pre-Stage-31 behavior
+ * for products with no colors.
  *
  * @param {string} productId
  * @param {File} file
  * @param {number} nextSortOrder
  * @param {boolean} isFirstImage
+ * @param {string|null} [colorId=null]
  */
-export async function addProductImage(productId, file, nextSortOrder, isFirstImage) {
+export async function addProductImage(productId, file, nextSortOrder, isFirstImage, colorId = null) {
+  // Storage path intentionally does NOT encode color — the existing
+  // "{productId}/{uuid}-{filename}" convention is kept as-is (see
+  // storageService.uploadProductImage). The color association lives only
+  // in the color_id DB column, same as every other image attribute
+  // (sort_order, is_primary) — no reason to duplicate it into the path.
   const { publicUrl } = await uploadProductImage(productId, file)
 
   const { data, error } = await supabase
     .from('product_images')
     .insert({
       product_id: productId,
-      color_id: null,
+      color_id: colorId,
       image_url: publicUrl,
       sort_order: nextSortOrder,
       is_primary: isFirstImage,

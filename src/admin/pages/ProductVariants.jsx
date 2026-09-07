@@ -22,6 +22,7 @@ import {
   getProductColors,
   createColor,
   deleteColor,
+  setColorActive,
   getProductSizes,
   createSize,
   deleteSize,
@@ -85,6 +86,7 @@ export default function ProductVariants() {
   // their own set since ids don't overlap across tables in practice, but we
   // still separate them to avoid any ambiguity)
   const [deletingColorIds, setDeletingColorIds] = useState(new Set())
+  const [togglingColorIds, setTogglingColorIds] = useState(new Set())
   const [deletingSizeIds, setDeletingSizeIds] = useState(new Set())
   const [busyVariantIds, setBusyVariantIds] = useState(new Set())
   const [stockDrafts, setStockDrafts] = useState({}) // variantId -> string being edited
@@ -182,6 +184,24 @@ export default function ProductVariants() {
       setErrorMessage('تعذر حذف اللون')
     } finally {
       setIdInSet(setDeletingColorIds, color.id, false)
+    }
+  }
+
+  // Marks a color out of stock across ALL of its sizes at once (or brings
+  // it back), without touching any product_variants rows — a size with no
+  // variant of its own is unlimited stock by default, so this is the only
+  // way to block an entire color in one step instead of creating a
+  // zero-stock variant for every one of its sizes individually.
+  async function handleToggleColorActive(color) {
+    setIdInSet(setTogglingColorIds, color.id, true)
+    try {
+      const updated = await setColorActive(color.id, !color.isActive)
+      setColors((prev) => prev.map((c) => (c.id === color.id ? { ...c, isActive: updated.isActive } : c)))
+    } catch (err) {
+      console.error('Failed to toggle color status:', err.message)
+      setErrorMessage('تعذر تغيير حالة اللون')
+    } finally {
+      setIdInSet(setTogglingColorIds, color.id, false)
     }
   }
 
@@ -415,16 +435,37 @@ export default function ProductVariants() {
               <ul className="flex flex-wrap gap-2">
                 {colors.map((color) => {
                   const isDeleting = deletingColorIds.has(color.id)
+                  const isToggling = togglingColorIds.has(color.id)
+                  const isOutOfStock = color.isActive === false
                   return (
                     <li
                       key={color.id}
-                      className="flex items-center gap-2 border border-gray-200 rounded-full pr-1.5 pl-3 py-1.5 text-sm"
+                      className={`flex items-center gap-2 border rounded-full pr-1.5 pl-3 py-1.5 text-sm ${
+                        isOutOfStock ? 'border-red-200 bg-red-50/50' : 'border-gray-200'
+                      }`}
                     >
                       <span
                         className="w-4 h-4 rounded-full border border-gray-200 shrink-0"
                         style={{ backgroundColor: color.hexCode || '#e5e7eb' }}
                       />
-                      <span className="text-gray-700">{color.name}</span>
+                      <span className={isOutOfStock ? 'text-gray-400 line-through' : 'text-gray-700'}>
+                        {color.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleColorActive(color)}
+                        disabled={isToggling}
+                        title={isOutOfStock ? 'اعادة التفعيل (متوفر)' : 'ايقاف هذا اللون (غير متوفر بكل مقاساته)'}
+                        className="text-gray-400 hover:text-brand-gold disabled:opacity-40 transition-colors"
+                      >
+                        {isToggling ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : isOutOfStock ? (
+                          <ToggleLeft size={16} className="text-red-400" />
+                        ) : (
+                          <ToggleRight size={16} className="text-green-600" />
+                        )}
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteColor(color)}
@@ -443,6 +484,9 @@ export default function ProductVariants() {
                 })}
               </ul>
             )}
+            <p className="text-xs text-gray-400">
+              استخدم زر التبديل لإيقاف لون بالكامل (كل مقاساته) دون الحاجة لإنشاء توليفة لكل مقاس على حدة.
+            </p>
 
             <form onSubmit={handleAddColor} noValidate className="flex flex-wrap items-end gap-3">
               <div className="flex-1 min-w-[160px]">
@@ -552,6 +596,10 @@ export default function ProductVariants() {
               <Boxes size={18} className="text-brand-gold" />
               <h3 className="font-bold text-gray-900">التوليفات والمخزون</h3>
             </div>
+
+            <p className="text-xs text-gray-400 -mt-2">
+              اي توليفة (لون + مقاس) لم تنشئها هنا تعتبر متوفرة بمخزون غير محدود تلقائيا. التوليفات مفيدة فقط عندما تريد تحديد كمية مخزون فعلية او ايقاف مقاس بعينه.
+            </p>
 
             {colors.length === 0 || sizes.length === 0 ? (
               <p className="text-sm text-gray-400">

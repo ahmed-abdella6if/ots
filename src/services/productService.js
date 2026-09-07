@@ -3,6 +3,15 @@
 
 import { supabase } from '../lib/supabaseClient'
 
+// Shared mapping for product_colors joined onto a product listing row —
+// used by product-card views so the customer can see color options before
+// clicking into the product detail page.
+function mapColors(colors) {
+  return [...(colors || [])]
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((c) => ({ id: c.id, name: c.name, hexCode: c.hex_code }))
+}
+
 /**
  * Fetches all products for the Admin Products list, joined with their category
  * name and a representative image (primary image if set, otherwise the first
@@ -15,7 +24,7 @@ export async function getProducts() {
   const { data, error } = await supabase
     .from('products')
     .select(
-      `id, name, base_price, is_active, created_at,
+      `id, name, name_en, base_price, is_active, is_bestseller, created_at,
        category:categories(id, name),
        images:product_images(image_url, is_primary, sort_order)`
     )
@@ -32,8 +41,10 @@ export async function getProducts() {
     return {
       id: product.id,
       name: product.name,
+      nameEn: product.name_en,
       basePrice: product.base_price,
       isActive: product.is_active,
+      isBestseller: product.is_bestseller,
       createdAt: product.created_at,
       categoryId: product.category?.id || null,
       categoryName: product.category?.name || '—',
@@ -75,11 +86,12 @@ function generateSku() {
  *
  * @param {{ name: string, description?: string, basePrice: number, categoryId: string, isActive: boolean }} productData
  */
-export async function createProduct({ name, description, basePrice, categoryId, isActive }) {
+export async function createProduct({ name, nameEn, description, basePrice, categoryId, isActive }) {
   const { data, error } = await supabase
     .from('products')
     .insert({
       name: name.trim(),
+      name_en: nameEn?.trim() || null,
       slug: generateUniqueSlug(name),
       description: description?.trim() || null,
       base_price: basePrice,
@@ -102,7 +114,7 @@ export async function createProduct({ name, description, basePrice, categoryId, 
 export async function getProduct(productId) {
   const { data, error } = await supabase
     .from('products')
-    .select('id, name, base_price, is_active')
+    .select('id, name, name_en, base_price, is_active')
     .eq('id', productId)
     .single()
 
@@ -111,6 +123,7 @@ export async function getProduct(productId) {
   return {
     id: data.id,
     name: data.name,
+    nameEn: data.name_en,
     basePrice: data.base_price,
     isActive: data.is_active,
   }
@@ -125,7 +138,7 @@ export async function getProduct(productId) {
 export async function getProductById(productId) {
   const { data, error } = await supabase
     .from('products')
-    .select('id, name, description, base_price, category_id, is_active')
+    .select('id, name, name_en, description, base_price, category_id, is_active')
     .eq('id', productId)
     .single()
 
@@ -134,6 +147,7 @@ export async function getProductById(productId) {
   return {
     id: data.id,
     name: data.name,
+    nameEn: data.name_en,
     description: data.description || '',
     basePrice: data.base_price,
     categoryId: data.category_id,
@@ -148,11 +162,12 @@ export async function getProductById(productId) {
  * @param {string} productId
  * @param {{ name: string, description?: string, basePrice: number, categoryId: string, isActive: boolean }} productData
  */
-export async function updateProduct(productId, { name, description, basePrice, categoryId, isActive }) {
+export async function updateProduct(productId, { name, nameEn, description, basePrice, categoryId, isActive }) {
   const { data, error } = await supabase
     .from('products')
     .update({
       name: name.trim(),
+      name_en: nameEn?.trim() || null,
       description: description?.trim() || null,
       base_price: basePrice,
       category_id: categoryId,
@@ -176,9 +191,10 @@ export async function getActiveProducts() {
   const { data, error } = await supabase
     .from('products')
     .select(
-      `id, name, slug, base_price, has_discount, discount_price, is_bestseller, created_at,
+      `id, name, name_en, slug, base_price, has_discount, discount_price, is_bestseller, created_at,
        category:categories(slug),
-       images:product_images(image_url, is_primary, sort_order)`
+       images:product_images(image_url, is_primary, sort_order),
+       colors:product_colors(id, name, hex_code, sort_order)`
     )
     .eq('is_active', true)
     .order('created_at', { ascending: false })
@@ -194,6 +210,7 @@ export async function getActiveProducts() {
     return {
       id: product.id,
       name: product.name,
+      nameEn: product.name_en,
       slug: product.slug,
       basePrice: product.base_price,
       hasDiscount: product.has_discount,
@@ -202,6 +219,7 @@ export async function getActiveProducts() {
       createdAt: product.created_at,
       categorySlug: product.category?.slug || null,
       imageUrl: image?.image_url || null,
+      colors: mapColors(product.colors),
     }
   })
 }
@@ -222,9 +240,10 @@ export async function getProductsByIds(ids) {
   const { data, error } = await supabase
     .from('products')
     .select(
-      `id, name, slug, base_price, has_discount, discount_price, is_bestseller, created_at, is_active,
+      `id, name, name_en, slug, base_price, has_discount, discount_price, is_bestseller, created_at, is_active,
        category:categories(slug),
-       images:product_images(image_url, is_primary, sort_order)`
+       images:product_images(image_url, is_primary, sort_order),
+       colors:product_colors(id, name, hex_code, sort_order)`
     )
     .in('id', ids)
 
@@ -242,6 +261,7 @@ export async function getProductsByIds(ids) {
         {
           id: product.id,
           name: product.name,
+          nameEn: product.name_en,
           slug: product.slug,
           basePrice: product.base_price,
           hasDiscount: product.has_discount,
@@ -251,6 +271,7 @@ export async function getProductsByIds(ids) {
           createdAt: product.created_at,
           categorySlug: product.category?.slug || null,
           imageUrl: image?.image_url || null,
+          colors: mapColors(product.colors),
         },
       ]
     })
@@ -271,9 +292,10 @@ export async function getProductsByCategoryId(categoryId) {
   const { data, error } = await supabase
     .from('products')
     .select(
-      `id, name, slug, base_price, has_discount, discount_price, is_bestseller, created_at,
+      `id, name, name_en, slug, base_price, has_discount, discount_price, is_bestseller, created_at,
        category:categories(slug),
-       images:product_images(image_url, is_primary, sort_order)`
+       images:product_images(image_url, is_primary, sort_order),
+       colors:product_colors(id, name, hex_code, sort_order)`
     )
     .eq('category_id', categoryId)
     .eq('is_active', true)
@@ -290,6 +312,7 @@ export async function getProductsByCategoryId(categoryId) {
     return {
       id: product.id,
       name: product.name,
+      nameEn: product.name_en,
       slug: product.slug,
       basePrice: product.base_price,
       hasDiscount: product.has_discount,
@@ -298,6 +321,7 @@ export async function getProductsByCategoryId(categoryId) {
       createdAt: product.created_at,
       categorySlug: product.category?.slug || null,
       imageUrl: image?.image_url || null,
+      colors: mapColors(product.colors),
     }
   })
 }
@@ -320,11 +344,11 @@ export async function getProductBySlug(slug) {
   const { data, error } = await supabase
     .from('products')
     .select(
-      `id, name, slug, description, material, base_price, has_discount, discount_price,
+      `id, name, name_en, slug, description, material, base_price, has_discount, discount_price,
        is_bestseller, is_active,
-       category:categories(id, name, slug),
+       category:categories(id, name, name_en, slug),
        images:product_images(id, image_url, color_id, sort_order, is_primary),
-       colors:product_colors(id, name, hex_code, sort_order),
+       colors:product_colors(id, name, hex_code, sort_order, is_active),
        sizes:product_sizes(id, name, sort_order),
        variants:product_variants(id, color_id, size_id, stock_quantity, price_override, is_active)`
     )
@@ -342,6 +366,7 @@ export async function getProductBySlug(slug) {
   return {
     id: data.id,
     name: data.name,
+    nameEn: data.name_en,
     slug: data.slug,
     description: data.description || '',
     material: data.material || '',
@@ -350,7 +375,7 @@ export async function getProductBySlug(slug) {
     discountPrice: data.discount_price,
     isBestseller: data.is_bestseller,
     category: data.category
-      ? { id: data.category.id, name: data.category.name, slug: data.category.slug }
+      ? { id: data.category.id, name: data.category.name, nameEn: data.category.name_en, slug: data.category.slug }
       : null,
     images: images.map((img) => ({
       id: img.id,
@@ -358,7 +383,7 @@ export async function getProductBySlug(slug) {
       colorId: img.color_id,
       isPrimary: img.is_primary,
     })),
-    colors: colors.map((c) => ({ id: c.id, name: c.name, hexCode: c.hex_code })),
+    colors: colors.map((c) => ({ id: c.id, name: c.name, hexCode: c.hex_code, isActive: c.is_active })),
     sizes: sizes.map((s) => ({ id: s.id, name: s.name })),
     variants: variants.map((v) => ({
       id: v.id,

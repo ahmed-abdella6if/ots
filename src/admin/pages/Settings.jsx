@@ -80,9 +80,15 @@ export default function Settings() {
   const [whatsappNumber, setWhatsappNumber] = useState('')
   const [instagramUrl, setInstagramUrl] = useState('')
   const [facebookUrl, setFacebookUrl] = useState('')
+  const [linkedinUrl, setLinkedinUrl] = useState('')
   const [paymentPolicy, setPaymentPolicy] = useState('')
+  const [paymentPolicyEn, setPaymentPolicyEn] = useState('')
   const [shippingPolicy, setShippingPolicy] = useState('')
+  const [shippingPolicyEn, setShippingPolicyEn] = useState('')
   const [returnPolicy, setReturnPolicy] = useState('')
+  const [returnPolicyEn, setReturnPolicyEn] = useState('')
+  const [privacyPolicy, setPrivacyPolicy] = useState('')
+  const [privacyPolicyEn, setPrivacyPolicyEn] = useState('')
   const [defaultShippingCost, setDefaultShippingCost] = useState('0')
   // STAGE 21 — free shipping rule
   const [freeShippingEnabled, setFreeShippingEnabled] = useState(false)
@@ -114,9 +120,15 @@ export default function Settings() {
         setWhatsappNumber(settings.whatsappNumber || '')
         setInstagramUrl(settings.socialLinks?.instagram || '')
         setFacebookUrl(settings.socialLinks?.facebook || '')
+        setLinkedinUrl(settings.socialLinks?.linkedin || '')
         setPaymentPolicy(settings.paymentPolicy || '')
+        setPaymentPolicyEn(settings.paymentPolicyEn || '')
         setShippingPolicy(settings.shippingPolicy || '')
+        setShippingPolicyEn(settings.shippingPolicyEn || '')
         setReturnPolicy(settings.returnPolicy || '')
+        setReturnPolicyEn(settings.returnPolicyEn || '')
+        setPrivacyPolicy(settings.privacyPolicy || '')
+        setPrivacyPolicyEn(settings.privacyPolicyEn || '')
         setDefaultShippingCost(
           settings.defaultShippingCost !== null && settings.defaultShippingCost !== undefined
             ? String(settings.defaultShippingCost)
@@ -220,6 +232,9 @@ export default function Settings() {
     if (!isValidUrl(facebookUrl)) {
       errors.facebookUrl = 'الرابط غير صحيح'
     }
+    if (!isValidUrl(linkedinUrl)) {
+      errors.linkedinUrl = 'الرابط غير صحيح'
+    }
 
     if (
       defaultShippingCost.trim() &&
@@ -278,10 +293,16 @@ export default function Settings() {
         socialLinks: {
           instagram: instagramUrl.trim() || undefined,
           facebook: facebookUrl.trim() || undefined,
+          linkedin: linkedinUrl.trim() || undefined,
         },
         paymentPolicy,
+        paymentPolicyEn,
         shippingPolicy,
+        shippingPolicyEn,
         returnPolicy,
+        returnPolicyEn,
+        privacyPolicy,
+        privacyPolicyEn,
         aboutUs,
         defaultShippingCost: defaultShippingCost.trim() ? Number(defaultShippingCost) : 0,
         freeShippingEnabled,
@@ -309,6 +330,7 @@ export default function Settings() {
     setCurrentLogoUrl(saved.logoUrl)
     setInstagramUrl(saved.socialLinks?.instagram || '')
     setFacebookUrl(saved.socialLinks?.facebook || '')
+    setLinkedinUrl(saved.socialLinks?.linkedin || '')
     setFreeShippingEnabled(Boolean(saved.freeShippingEnabled))
     setFreeShippingMinOrderAmount(
       saved.freeShippingMinOrderAmount !== null && saved.freeShippingMinOrderAmount !== undefined
@@ -511,14 +533,38 @@ export default function Settings() {
               placeholder="https://facebook.com/yourstore"
             />
           </Field>
+
+          <Field label="رابط لينكدإن" error={fieldErrors.linkedinUrl}>
+            <input
+              type="text"
+              dir="ltr"
+              value={linkedinUrl}
+              onChange={(e) => setLinkedinUrl(e.target.value)}
+              className={inputClass(fieldErrors.linkedinUrl)}
+              placeholder="https://linkedin.com/company/yourstore"
+            />
+          </Field>
         </SectionCard>
 
         {/* سياسات المتجر */}
-        <SectionCard icon={FileText} title="سياسات المتجر">
+        <SectionCard
+          icon={FileText}
+          title="سياسات المتجر"
+          subtitle="النص الانجليزي اختياري — اذا تُرك فارغا يظهر النص العربي للعميل حتى في وضع اللغة الانجليزية"
+        >
           <Field label="سياسة الدفع">
             <textarea
               value={paymentPolicy}
               onChange={(e) => setPaymentPolicy(e.target.value)}
+              rows={4}
+              className={inputClass(false) + ' resize-none'}
+            />
+          </Field>
+          <Field label="سياسة الدفع بالانجليزية (اختياري)">
+            <textarea
+              dir="ltr"
+              value={paymentPolicyEn}
+              onChange={(e) => setPaymentPolicyEn(e.target.value)}
               rows={4}
               className={inputClass(false) + ' resize-none'}
             />
@@ -532,11 +578,47 @@ export default function Settings() {
               className={inputClass(false) + ' resize-none'}
             />
           </Field>
+          <Field label="سياسة الشحن بالانجليزية (اختياري)">
+            <textarea
+              dir="ltr"
+              value={shippingPolicyEn}
+              onChange={(e) => setShippingPolicyEn(e.target.value)}
+              rows={4}
+              className={inputClass(false) + ' resize-none'}
+            />
+          </Field>
 
           <Field label="سياسة الاستبدال والاسترجاع">
             <textarea
               value={returnPolicy}
               onChange={(e) => setReturnPolicy(e.target.value)}
+              rows={4}
+              className={inputClass(false) + ' resize-none'}
+            />
+          </Field>
+          <Field label="سياسة الاستبدال والاسترجاع بالانجليزية (اختياري)">
+            <textarea
+              dir="ltr"
+              value={returnPolicyEn}
+              onChange={(e) => setReturnPolicyEn(e.target.value)}
+              rows={4}
+              className={inputClass(false) + ' resize-none'}
+            />
+          </Field>
+
+          <Field label="سياسة الخصوصية">
+            <textarea
+              value={privacyPolicy}
+              onChange={(e) => setPrivacyPolicy(e.target.value)}
+              rows={4}
+              className={inputClass(false) + ' resize-none'}
+            />
+          </Field>
+          <Field label="سياسة الخصوصية بالانجليزية (اختياري)">
+            <textarea
+              dir="ltr"
+              value={privacyPolicyEn}
+              onChange={(e) => setPrivacyPolicyEn(e.target.value)}
               rows={4}
               className={inputClass(false) + ' resize-none'}
             />

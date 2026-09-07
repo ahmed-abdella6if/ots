@@ -1,15 +1,14 @@
 // سياسة الاستبدال والاسترجاع — Returns policy page, content from
-// store_settings.return_policy. The policy text itself is admin-entered
-// business content (store_settings), so it is NOT translated — only the
-// page chrome (heading, loading/error/empty states) follows the active
-// language.
+// store_settings.return_policy (returnPolicyEn for English, falling back to
+// the Arabic text when no translation has been entered — same fallback
+// pattern as product/category names, see getLocalizedName.js).
 
 import { useEffect, useState } from 'react'
 import { getStoreSettings } from '../services/settingsService'
 import { useLanguage } from '../hooks/useLanguage'
 
 export default function PolicyReturnsPage() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [content, setContent] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -18,7 +17,7 @@ export default function PolicyReturnsPage() {
     let isMounted = true
     getStoreSettings()
       .then((data) => {
-        if (isMounted) setContent(data?.returnPolicy || '')
+        if (isMounted) setContent((language === 'en' ? data?.returnPolicyEn : null) || data?.returnPolicy || '')
       })
       .catch((err) => {
         console.error('Failed to load return policy:', err.message)
@@ -30,7 +29,7 @@ export default function PolicyReturnsPage() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [language])
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">

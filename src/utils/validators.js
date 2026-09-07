@@ -58,7 +58,7 @@ export function validateCheckoutFields({ fullName, phone, email, address, city, 
   }
 
   if (!city || !city.trim()) {
-    errors.city = 'المدينة مطلوبة'
+    errors.city = 'المنطقة مطلوبة'
   }
 
   if (!governorate || !governorate.trim()) {

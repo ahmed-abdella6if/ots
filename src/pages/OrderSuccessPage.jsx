@@ -20,7 +20,7 @@ export default function OrderSuccessPage() {
   const { id } = useParams()
   const location = useLocation()
   const stateOrder = location.state?.order || null
-  const { t, dir } = useLanguage()
+  const { t, dir, language } = useLanguage()
 
   const [order, setOrder] = useState(stateOrder)
   const [loading, setLoading] = useState(!stateOrder)
@@ -123,7 +123,7 @@ export default function OrderSuccessPage() {
                   )}
                   <span className="text-gray-400"> × {item.quantity}</span>
                 </div>
-                <span className="font-medium text-gray-900">{formatKWD(item.lineTotal)}</span>
+                <span className="font-medium text-gray-900">{formatKWD(item.lineTotal, language)}</span>
               </div>
             ))}
           </div>
@@ -131,7 +131,7 @@ export default function OrderSuccessPage() {
 
         <div className="border-t border-gray-100 pt-4 flex items-center justify-between">
           <span className="text-base font-bold text-gray-900">{t('order.total')}</span>
-          <span className="text-base font-bold text-gray-900">{formatKWD(order.total)}</span>
+          <span className="text-base font-bold text-gray-900">{formatKWD(order.total, language)}</span>
         </div>
       </div>
 

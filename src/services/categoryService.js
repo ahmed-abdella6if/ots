@@ -18,7 +18,7 @@ import { supabase } from '../lib/supabaseClient'
 export async function getCategories() {
   const { data, error } = await supabase
     .from('categories')
-    .select('id, name, parent_id')
+    .select('id, name, name_en, parent_id')
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
     .order('name', { ascending: true })
@@ -28,6 +28,7 @@ export async function getCategories() {
   return (data || []).map((cat) => ({
     id: cat.id,
     name: cat.name,
+    nameEn: cat.name_en,
     parentId: cat.parent_id,
   }))
 }
@@ -39,7 +40,7 @@ export async function getCategories() {
 export async function getAllCategoriesForAdmin() {
   const { data, error } = await supabase
     .from('categories')
-    .select('id, name, slug, description, image_url, parent_id, sort_order, is_active, created_at, updated_at')
+    .select('id, name, name_en, slug, description, image_url, parent_id, sort_order, is_active, created_at, updated_at')
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false })
 
@@ -57,7 +58,7 @@ export async function getAllCategoriesForAdmin() {
 export async function getCategoryById(categoryId) {
   const { data, error } = await supabase
     .from('categories')
-    .select('id, name, slug, description, image_url, parent_id, sort_order, is_active, created_at, updated_at')
+    .select('id, name, name_en, slug, description, image_url, parent_id, sort_order, is_active, created_at, updated_at')
     .eq('id', categoryId)
     .single()
 
@@ -86,6 +87,7 @@ function mapCategoryRow(cat) {
   return {
     id: cat.id,
     name: cat.name,
+    nameEn: cat.name_en,
     slug: cat.slug,
     description: cat.description || '',
     imageUrl: cat.image_url,
@@ -167,13 +169,14 @@ export async function generateUniqueCategorySlug(name, excludeCategoryId) {
  * Creates a new category. The slug is generated automatically from the name.
  * @param {{ name: string, description?: string, sortOrder?: number, isActive: boolean }} data
  */
-export async function createCategory({ name, description, sortOrder, isActive }) {
+export async function createCategory({ name, nameEn, description, sortOrder, isActive }) {
   const slug = await generateUniqueCategorySlug(name)
 
   const { data, error } = await supabase
     .from('categories')
     .insert({
       name: name.trim(),
+      name_en: nameEn?.trim() || null,
       slug,
       description: description?.trim() || null,
       sort_order: sortOrder ?? 0,
@@ -194,11 +197,12 @@ export async function createCategory({ name, description, sortOrder, isActive })
  * @param {string} categoryId
  * @param {{ name: string, description?: string, sortOrder?: number, isActive: boolean }} data
  */
-export async function updateCategory(categoryId, { name, description, sortOrder, isActive }) {
+export async function updateCategory(categoryId, { name, nameEn, description, sortOrder, isActive }) {
   const { data, error } = await supabase
     .from('categories')
     .update({
       name: name.trim(),
+      name_en: nameEn?.trim() || null,
       description: description?.trim() || null,
       sort_order: sortOrder ?? 0,
       is_active: isActive,
@@ -281,7 +285,7 @@ export async function deleteCategory(categoryId) {
 export async function getHomepageCategories() {
   const { data, error } = await supabase
     .from('categories')
-    .select('id, name, slug, description, image_url, sort_order')
+    .select('id, name, name_en, slug, description, image_url, sort_order')
     .eq('is_active', true)
     .is('parent_id', null)
     .order('sort_order', { ascending: true })
@@ -292,6 +296,7 @@ export async function getHomepageCategories() {
   return (data || []).map((cat) => ({
     id: cat.id,
     name: cat.name,
+    nameEn: cat.name_en,
     slug: cat.slug,
     description: cat.description || '',
     imageUrl: cat.image_url,
@@ -309,7 +314,7 @@ export async function getHomepageCategories() {
 export async function getCategoryBySlug(slug) {
   const { data, error } = await supabase
     .from('categories')
-    .select('id, name, slug, description, image_url, parent_id, is_active')
+    .select('id, name, name_en, slug, description, image_url, parent_id, is_active')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -318,7 +323,7 @@ export async function getCategoryBySlug(slug) {
 
   const { data: subData, error: subError } = await supabase
     .from('categories')
-    .select('id, name, slug, image_url, sort_order')
+    .select('id, name, name_en, slug, image_url, sort_order')
     .eq('parent_id', data.id)
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
@@ -329,6 +334,7 @@ export async function getCategoryBySlug(slug) {
   return {
     id: data.id,
     name: data.name,
+    nameEn: data.name_en,
     slug: data.slug,
     description: data.description || '',
     imageUrl: data.image_url,
@@ -336,6 +342,7 @@ export async function getCategoryBySlug(slug) {
     subcategories: (subData || []).map((c) => ({
       id: c.id,
       name: c.name,
+      nameEn: c.name_en,
       slug: c.slug,
       imageUrl: c.image_url,
     })),

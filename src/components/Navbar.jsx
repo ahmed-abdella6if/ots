@@ -9,6 +9,7 @@ import { ShoppingBag, Menu, X, User, LogOut } from 'lucide-react'
 import { useCart } from '../hooks/useCart'
 import { useAuth } from '../hooks/useAuth'
 import { useLanguage } from '../hooks/useLanguage'
+import { getLocalizedName } from '../utils/localizedName'
 
 // STAGE 30 — visible AR/EN language switcher, added to the existing Navbar
 // (no redesign — placed among the existing icon buttons on both desktop and
@@ -51,7 +52,7 @@ export default function Navbar({ storeSettings, categories }) {
   const [isAccountMenuOpen, setAccountMenuOpen] = useState(false)
   const { totalItems } = useCart()
   const { user, signOut } = useAuth()
-  const { t, dir } = useLanguage()
+  const { t, dir, language } = useLanguage()
   const navigate = useNavigate()
   const brandName = storeSettings?.brandName || 'المتجر'
   // STAGE 30 — the account dropdown / cart badge use absolute positioning
@@ -93,7 +94,7 @@ export default function Navbar({ storeSettings, categories }) {
               to={`/category/${cat.slug}`}
               className="text-sm text-gray-700 hover:text-brand-gold transition-colors"
             >
-              {cat.name}
+              {getLocalizedName(cat, language)}
             </Link>
           ))}
         </nav>
@@ -189,7 +190,7 @@ export default function Navbar({ storeSettings, categories }) {
               onClick={() => setMenuOpen(false)}
               className="block py-2 text-sm text-gray-700 hover:text-brand-gold transition-colors"
             >
-              {cat.name}
+              {getLocalizedName(cat, language)}
             </Link>
           ))}
           <div className="border-t border-gray-100 mt-2 pt-2">

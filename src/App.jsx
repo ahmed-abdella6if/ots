@@ -7,6 +7,7 @@ import MainLayout from './layouts/MainLayout'
 import AdminLayout from './layouts/AdminLayout'
 import ProtectedAdminRoute from './components/ProtectedAdminRoute'
 import ProtectedCustomerRoute from './components/ProtectedCustomerRoute'
+import ScrollToTop from './components/ScrollToTop'
 
 // Customer pages
 import HomePage from './pages/HomePage'
@@ -25,6 +26,7 @@ import RegisterPage from './pages/RegisterPage'
 import PolicyPaymentPage from './pages/PolicyPaymentPage'
 import PolicyShippingPage from './pages/PolicyShippingPage'
 import PolicyReturnsPage from './pages/PolicyReturnsPage'
+import PolicyPrivacyPage from './pages/PolicyPrivacyPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 // Admin pages
@@ -43,7 +45,9 @@ import Settings from './admin/pages/Settings'
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       {/* Customer site */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
@@ -64,6 +68,7 @@ export default function App() {
         <Route path="/policies/payment" element={<PolicyPaymentPage />} />
         <Route path="/policies/shipping" element={<PolicyShippingPage />} />
         <Route path="/policies/returns" element={<PolicyReturnsPage />} />
+        <Route path="/policies/privacy" element={<PolicyPrivacyPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 
@@ -85,6 +90,7 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
         </Route>
       </Route>
-    </Routes>
+      </Routes>
+    </>
   )
 }

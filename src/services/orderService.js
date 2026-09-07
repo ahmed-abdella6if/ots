@@ -19,7 +19,7 @@
 
 import { supabase } from '../lib/supabaseClient'
 import { getProductsByIds } from './productService'
-import { getVariantsByIds } from './productVariantService'
+import { getVariantsByIds, getColorsByIds } from './productVariantService'
 import { getStoreSettings } from './settingsService'
 
 const ORDER_LIST_COLUMNS = 'id, order_number, customer_name, total, payment_status, order_status, created_at'
@@ -269,19 +269,18 @@ export async function getOrdersByGuestContact(contactValue) {
 // STAGE 15 — Customer checkout & order creation
 // =======================================================================
 //
-// KNOWN SCHEMA LIMITATION (reported, not silently worked around):
-// `order_items.variant_id` is `not null` in the existing schema, but a
-// product can legitimately exist with zero product_variants rows (no
-// colors/sizes ever added to it — see ProductPage.jsx, which explicitly
-// supports adding such a product to the cart with `variantId: null`).
-// That means the current schema cannot store an order_item for a
-// variant-less product. This function does NOT alter the schema to work
-// around it (per the "do not change schema unless justified" instruction);
-// instead, `validateCartForCheckout` below flags any such cart line as
-// `unavailable` with a clear reason, so checkout blocks that specific line
-// with a friendly message instead of failing with a raw Postgres error.
-// See the implementation report for the exact one-line SQL fix, offered
-// but not executed.
+// UNLIMITED STOCK FOR UN-CONFIGURED COMBOS (see migration
+// 20260907143000_unlimited_stock_and_color_toggle.sql):
+// `order_items.variant_id` is now nullable. A color+size combination with
+// no matching product_variants row is intentionally treated as unlimited
+// stock — the admin never has to create a توليفة (variant) for every single
+// combination just to make a product purchasable; variants are an opt-in
+// way to cap/track stock for specific combos. The one thing that still
+// blocks a combo outright is the color itself being marked out of stock
+// (product_colors.is_active = false, toggled per-color in the admin
+// Products > Variants page) — see the `else if (item.colorId)` branch
+// below and colorAvailable() in ProductPage.jsx for the matching
+// customer-facing logic.
 
 /**
  * Re-validates every cart line against trusted, live database values
@@ -297,7 +296,7 @@ export async function getOrdersByGuestContact(contactValue) {
  *   | { key: string, ok: true, productId: string, variantId: string|null, name: string,
  *       imageUrl: string|null, colorName: string|null, sizeName: string|null,
  *       quantity: number, unitPrice: number, lineTotal: number }
- *   | { key: string, ok: false, reason: 'product_unavailable' | 'variant_unavailable' | 'insufficient_stock' | 'variant_required',
+ *   | { key: string, ok: false, reason: 'product_unavailable' | 'variant_unavailable' | 'insufficient_stock',
  *       name: string, availableStock?: number }
  * >>}
  */
@@ -306,14 +305,20 @@ export async function validateCartForCheckout(cartItems) {
 
   const productIds = [...new Set(cartItems.map((i) => i.productId))]
   const variantIds = [...new Set(cartItems.filter((i) => i.variantId).map((i) => i.variantId))]
+  // Cart lines with no variantId but a picked color are the "unlimited
+  // stock" case — the only thing that can still block them is the color
+  // having been marked out of stock since the item was added to the cart.
+  const colorIds = [...new Set(cartItems.filter((i) => !i.variantId && i.colorId).map((i) => i.colorId))]
 
-  const [products, variants] = await Promise.all([
+  const [products, variants, colors] = await Promise.all([
     getProductsByIds(productIds),
     getVariantsByIds(variantIds),
+    getColorsByIds(colorIds),
   ])
 
   const productMap = new Map(products.map((p) => [p.id, p]))
   const variantMap = new Map(variants.map((v) => [v.id, v]))
+  const colorMap = new Map(colors.map((c) => [c.id, c]))
 
   return cartItems.map((item) => {
     const product = productMap.get(item.productId)
@@ -346,15 +351,18 @@ export async function validateCartForCheckout(cartItems) {
       if (variant.priceOverride != null) unitPrice = variant.priceOverride
       colorName = variant.colorName || colorName
       sizeName = variant.sizeName || sizeName
-    } else if (item.colorId || item.sizeId) {
-      // A color/size was picked on the product page but no matching
-      // variant row exists for it — the underlying stock record is gone.
-      return { key: item.key, ok: false, reason: 'variant_unavailable', name: product.name }
+    } else if (item.colorId) {
+      // No specific variant row for this color+size — unlimited stock,
+      // unless the color itself has since been marked out of stock.
+      const color = colorMap.get(item.colorId)
+      if (color && color.isActive === false) {
+        return { key: item.key, ok: false, reason: 'variant_unavailable', name: product.name }
+      }
     }
-    // else: a genuinely variant-less product (no colors/sizes at all) —
-    // allowed to price normally here; blocked at order-creation time only
-    // (see the schema limitation note above), so the summary can still
-    // show it while checkout explains why it can't be ordered yet.
+    // else: no color at all (a sizes-only or fully variant-less product) —
+    // always priced normally here; product_variants requires both a color
+    // and a size, so a colorless product can never have a variant to check
+    // against in the first place.
 
     const roundedPrice = Math.round(unitPrice * 100) / 100
     const lineTotal = Math.round(roundedPrice * item.quantity * 100) / 100
@@ -487,16 +495,10 @@ export async function createOrder({ customer, customerId, items, discount }) {
     throw new Error('EMPTY_CART')
   }
 
-  const invalidVariantless = items.find((i) => !i.variantId)
-  if (invalidVariantless) {
-    // See the schema-limitation note above `validateCartForCheckout` —
-    // order_items.variant_id is NOT NULL, so this line cannot be persisted
-    // without a schema change that was not made in this stage.
-    const err = new Error('VARIANT_REQUIRED')
-    err.code = 'VARIANT_REQUIRED'
-    err.productName = invalidVariantless.name
-    throw err
-  }
+  // order_items.variant_id is nullable (see migration
+  // 20260907143000_unlimited_stock_and_color_toggle.sql) — an item with no
+  // variantId is the intentional "unlimited stock" case (no product_variants
+  // row exists for its color+size combo), not an error condition.
 
   const subtotal = Math.round(items.reduce((sum, i) => sum + i.lineTotal, 0) * 100) / 100
   const discountAmount = discount ? Math.min(Math.round(discount.discountAmount * 100) / 100, subtotal) : 0

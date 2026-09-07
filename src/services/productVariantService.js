@@ -21,7 +21,7 @@ function isUniqueViolation(err) {
 export async function getProductColors(productId) {
   const { data, error } = await supabase
     .from('product_colors')
-    .select('id, name, hex_code, sort_order')
+    .select('id, name, hex_code, sort_order, is_active')
     .eq('product_id', productId)
     .order('sort_order', { ascending: true })
     .order('name', { ascending: true })
@@ -33,7 +33,50 @@ export async function getProductColors(productId) {
     name: c.name,
     hexCode: c.hex_code,
     sortOrder: c.sort_order,
+    isActive: c.is_active,
   }))
+}
+
+/**
+ * Fetches active-status flags for a set of colors by id — used by
+ * checkout's validateCartForCheckout to check whether a cart line's color
+ * has since been marked out of stock, for cart lines that have no specific
+ * variant_id (an "unlimited stock" combo — see createVariant/colors docs
+ * below).
+ * @param {string[]} colorIds
+ */
+export async function getColorsByIds(colorIds) {
+  if (!colorIds || colorIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('product_colors')
+    .select('id, is_active')
+    .in('id', colorIds)
+
+  if (error) throw error
+  return (data || []).map((c) => ({ id: c.id, isActive: c.is_active }))
+}
+
+/**
+ * Toggles a color's active status. Unlike a product_variants row (which
+ * tracks stock for one specific color+size combination), this applies to
+ * the color across EVERY size at once — an admin no longer has to create a
+ * zero-stock variant for each of that color's sizes just to mark the whole
+ * color unavailable. See ProductPage.jsx (colorAvailable) and
+ * orderService.validateCartForCheckout for where this is enforced.
+ * @param {string} colorId
+ * @param {boolean} isActive
+ */
+export async function setColorActive(colorId, isActive) {
+  const { data, error } = await supabase
+    .from('product_colors')
+    .update({ is_active: isActive })
+    .eq('id', colorId)
+    .select('id, is_active')
+    .single()
+
+  if (error) throw error
+  return { id: data.id, isActive: data.is_active }
 }
 
 /**

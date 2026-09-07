@@ -11,7 +11,7 @@ import { formatKWD } from '../utils/formatPrice'
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, subtotal } = useCart()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   // Stage 17 — optional one-time notice from MyOrderDetailPage's "إعادة
   // الطلب" when only some items from the original order could be re-added.
   const notice = useLocation().state?.notice
@@ -72,7 +72,7 @@ export default function CartPage() {
                   </p>
                 )}
 
-                <p className="text-sm font-bold text-gray-900 mt-2">{formatKWD(item.unitPrice)}</p>
+                <p className="text-sm font-bold text-gray-900 mt-2">{formatKWD(item.unitPrice, language)}</p>
 
                 <div className="flex items-center justify-between mt-3">
                   <div className="flex items-center border border-gray-200 rounded-lg">
@@ -111,7 +111,7 @@ export default function CartPage() {
         <div className="rounded-2xl border border-gray-100 p-5 h-fit">
           <div className="flex items-center justify-between text-sm text-gray-600">
             <span>{t('cart.subtotal')}</span>
-            <span className="font-bold text-gray-900">{formatKWD(subtotal)}</span>
+            <span className="font-bold text-gray-900">{formatKWD(subtotal, language)}</span>
           </div>
           <p className="text-xs text-gray-400 mt-2">{t('cart.shippingNote')}</p>
           <Link

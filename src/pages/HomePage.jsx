@@ -53,7 +53,7 @@ function SectionTitle({ children }) {
 export default function HomePage() {
   const { storeSettings, categories } = useOutletContext() ?? { storeSettings: null, categories: [] }
   const location = useLocation()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   const [homepageContent, setHomepageContent] = useState(null)
   const [products, setProducts] = useState([])
@@ -226,8 +226,8 @@ export default function HomePage() {
                     {promo.code}
                   </p>
                   <p className="text-xs text-gray-600 mt-0.5">
-                    {t('home.discountPrefix')} {promo.discountType === 'percentage' ? `${Number(promo.discountValue)}%` : formatKWD(promo.discountValue)}
-                    {promo.minOrderAmount > 0 && <> {t('home.onOrdersOverSuffix', { amount: formatKWD(promo.minOrderAmount) })}</>}
+                    {t('home.discountPrefix')} {promo.discountType === 'percentage' ? `${Number(promo.discountValue)}%` : formatKWD(promo.discountValue, language)}
+                    {promo.minOrderAmount > 0 && <> {t('home.onOrdersOverSuffix', { amount: formatKWD(promo.minOrderAmount, language) })}</>}
                   </p>
                 </div>
               </div>
