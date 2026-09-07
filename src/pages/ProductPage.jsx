@@ -244,7 +244,7 @@ export default function ProductPage() {
         <div className="max-w-sm mx-auto lg:mx-0">
           <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-50">
             {activeImage ? (
-              <img src={activeImage.imageUrl} alt={displayName} className="w-full h-full object-cover" />
+              <img src={activeImage.imageUrl} alt={displayName} className="w-full h-full object-contain p-2" />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center gap-2">
                 <ImageOff size={36} className="text-gray-300" />
