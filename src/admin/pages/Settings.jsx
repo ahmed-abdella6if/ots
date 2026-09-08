@@ -80,7 +80,8 @@ export default function Settings() {
   const [whatsappNumber, setWhatsappNumber] = useState('')
   const [instagramUrl, setInstagramUrl] = useState('')
   const [facebookUrl, setFacebookUrl] = useState('')
-  const [linkedinUrl, setLinkedinUrl] = useState('')
+  const [tiktokUrl, setTiktokUrl] = useState('')
+  const [snapchatUrl, setSnapchatUrl] = useState('')
   const [paymentPolicy, setPaymentPolicy] = useState('')
   const [paymentPolicyEn, setPaymentPolicyEn] = useState('')
   const [shippingPolicy, setShippingPolicy] = useState('')
@@ -120,7 +121,8 @@ export default function Settings() {
         setWhatsappNumber(settings.whatsappNumber || '')
         setInstagramUrl(settings.socialLinks?.instagram || '')
         setFacebookUrl(settings.socialLinks?.facebook || '')
-        setLinkedinUrl(settings.socialLinks?.linkedin || '')
+        setTiktokUrl(settings.socialLinks?.tiktok || '')
+        setSnapchatUrl(settings.socialLinks?.snapchat || '')
         setPaymentPolicy(settings.paymentPolicy || '')
         setPaymentPolicyEn(settings.paymentPolicyEn || '')
         setShippingPolicy(settings.shippingPolicy || '')
@@ -232,8 +234,11 @@ export default function Settings() {
     if (!isValidUrl(facebookUrl)) {
       errors.facebookUrl = 'الرابط غير صحيح'
     }
-    if (!isValidUrl(linkedinUrl)) {
-      errors.linkedinUrl = 'الرابط غير صحيح'
+    if (!isValidUrl(tiktokUrl)) {
+      errors.tiktokUrl = 'الرابط غير صحيح'
+    }
+    if (!isValidUrl(snapchatUrl)) {
+      errors.snapchatUrl = 'الرابط غير صحيح'
     }
 
     if (
@@ -293,7 +298,8 @@ export default function Settings() {
         socialLinks: {
           instagram: instagramUrl.trim() || undefined,
           facebook: facebookUrl.trim() || undefined,
-          linkedin: linkedinUrl.trim() || undefined,
+          tiktok: tiktokUrl.trim() || undefined,
+          snapchat: snapchatUrl.trim() || undefined,
         },
         paymentPolicy,
         paymentPolicyEn,
@@ -330,7 +336,8 @@ export default function Settings() {
     setCurrentLogoUrl(saved.logoUrl)
     setInstagramUrl(saved.socialLinks?.instagram || '')
     setFacebookUrl(saved.socialLinks?.facebook || '')
-    setLinkedinUrl(saved.socialLinks?.linkedin || '')
+    setTiktokUrl(saved.socialLinks?.tiktok || '')
+    setSnapchatUrl(saved.socialLinks?.snapchat || '')
     setFreeShippingEnabled(Boolean(saved.freeShippingEnabled))
     setFreeShippingMinOrderAmount(
       saved.freeShippingMinOrderAmount !== null && saved.freeShippingMinOrderAmount !== undefined
@@ -534,14 +541,25 @@ export default function Settings() {
             />
           </Field>
 
-          <Field label="رابط لينكدإن" error={fieldErrors.linkedinUrl}>
+          <Field label="رابط تيك توك" error={fieldErrors.tiktokUrl}>
             <input
               type="text"
               dir="ltr"
-              value={linkedinUrl}
-              onChange={(e) => setLinkedinUrl(e.target.value)}
-              className={inputClass(fieldErrors.linkedinUrl)}
-              placeholder="https://linkedin.com/company/yourstore"
+              value={tiktokUrl}
+              onChange={(e) => setTiktokUrl(e.target.value)}
+              className={inputClass(fieldErrors.tiktokUrl)}
+              placeholder="https://www.tiktok.com/@yourstore"
+            />
+          </Field>
+
+          <Field label="رابط سناب شات" error={fieldErrors.snapchatUrl}>
+            <input
+              type="text"
+              dir="ltr"
+              value={snapchatUrl}
+              onChange={(e) => setSnapchatUrl(e.target.value)}
+              className={inputClass(fieldErrors.snapchatUrl)}
+              placeholder="https://www.snapchat.com/add/yourstore"
             />
           </Field>
         </SectionCard>

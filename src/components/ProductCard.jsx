@@ -74,7 +74,7 @@ export default function ProductCard({ product }) {
               </span>
             </>
           ) : (
-            <span className="text-sm font-bold text-gray-900">
+            <span className="text-sm font-bold text-red-500">
               {formatKWD(basePrice, language)}
             </span>
           )}

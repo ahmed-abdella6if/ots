@@ -540,7 +540,7 @@ export default function CheckoutPage() {
                       <span className="text-xs text-gray-500">
                         {item.quantity} × {formatKWD(item.unitPrice, language)}
                       </span>
-                      <span className="text-sm font-bold text-gray-900">{formatKWD(item.lineTotal, language)}</span>
+                      <span className="text-sm font-bold text-red-500">{formatKWD(item.lineTotal, language)}</span>
                     </div>
                   </div>
                 </div>
@@ -652,7 +652,7 @@ export default function CheckoutPage() {
           <div className="border-t border-gray-100 pt-4 space-y-2 text-sm">
             <div className="flex items-center justify-between text-gray-600">
               <span>{t('checkout.subtotal')}</span>
-              <span className="text-gray-900">{formatKWD(subtotal, language)}</span>
+              <span className="text-red-500 font-medium">{formatKWD(subtotal, language)}</span>
             </div>
             {discountAmount > 0 && (
               <div className="flex items-center justify-between text-brand-gold">
@@ -662,7 +662,7 @@ export default function CheckoutPage() {
             )}
             <div className="flex items-center justify-between text-gray-600">
               <span>{t('checkout.shipping')}</span>
-              <span className="text-gray-900">{shippingCost > 0 ? formatKWD(shippingCost, language) : t('checkout.freeShipping')}</span>
+              <span className={shippingCost > 0 ? 'text-red-500 font-medium' : 'text-gray-900'}>{shippingCost > 0 ? formatKWD(shippingCost, language) : t('checkout.freeShipping')}</span>
             </div>
             {piecesToFreeShipping != null && (
               <p className="text-xs text-gray-400 -mt-1">
@@ -679,7 +679,7 @@ export default function CheckoutPage() {
             )}
             <div className="flex items-center justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
               <span>{t('checkout.total')}</span>
-              <span>{formatKWD(total, language)}</span>
+              <span className="text-red-500">{formatKWD(total, language)}</span>
             </div>
           </div>
 

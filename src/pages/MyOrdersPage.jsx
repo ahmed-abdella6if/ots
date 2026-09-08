@@ -129,7 +129,7 @@ export default function MyOrdersPage() {
                     className={PAYMENT_STATUS_STYLES[order.paymentStatus] || 'bg-gray-100 text-gray-500'}
                   />
                 </div>
-                <span className="text-sm font-bold text-gray-900">{formatKWD(order.total, language)}</span>
+                <span className="text-sm font-bold text-red-500">{formatKWD(order.total, language)}</span>
               </div>
             </Link>
           ))}

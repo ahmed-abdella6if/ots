@@ -3,6 +3,7 @@
 // states. Mirrors HomePage's data-fetching + skeleton conventions.
 
 import { Link, useParams } from 'react-router-dom'
+import { ChevronLeft } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 import NotFoundPage from './NotFoundPage'
 import { useCategoryPage } from '../hooks/useCategories'
@@ -47,6 +48,14 @@ export default function CategoryPage() {
         </div>
       ) : (
         <>
+          <nav className="flex items-center gap-1.5 text-xs text-gray-400 mb-6">
+            <Link to="/" className="hover:text-brand-gold transition-colors">
+              {t('nav.home')}
+            </Link>
+            <ChevronLeft size={12} />
+            <span className="text-gray-600">{getLocalizedName(category, language)}</span>
+          </nav>
+
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900">{getLocalizedName(category, language)}</h1>
             {category.description && (

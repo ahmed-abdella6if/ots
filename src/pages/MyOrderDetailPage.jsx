@@ -427,7 +427,7 @@ export default function MyOrderDetailPage() {
                     <span className="text-xs text-gray-500">
                       {item.quantity} × {formatKWD(item.unitPrice, language)}
                     </span>
-                    <span className="text-sm font-bold text-gray-900">{formatKWD(item.lineTotal, language)}</span>
+                    <span className="text-sm font-bold text-red-500">{formatKWD(item.lineTotal, language)}</span>
                   </div>
                 </div>
               </div>
@@ -440,7 +440,7 @@ export default function MyOrderDetailPage() {
       <div className="bg-white border border-gray-100 rounded-2xl p-5 space-y-2 text-sm mb-4">
         <div className="flex items-center justify-between text-gray-600">
           <span>{t('checkout.subtotal')}</span>
-          <span className="text-gray-900">{formatKWD(order.subtotal, language)}</span>
+          <span className="text-red-500 font-medium">{formatKWD(order.subtotal, language)}</span>
         </div>
         {order.discountAmount > 0 && (
           <div className="flex items-center justify-between text-brand-gold">
@@ -450,13 +450,13 @@ export default function MyOrderDetailPage() {
         )}
         <div className="flex items-center justify-between text-gray-600">
           <span>{t('order.shipping')}</span>
-          <span className="text-gray-900">
+          <span className={order.shippingCost > 0 ? 'text-red-500 font-medium' : 'text-gray-900'}>
             {order.shippingCost > 0 ? formatKWD(order.shippingCost, language) : t('order.freeShipping')}
           </span>
         </div>
         <div className="flex items-center justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
           <span>{t('order.total')}</span>
-          <span>{formatKWD(order.total, language)}</span>
+          <span className="text-red-500">{formatKWD(order.total, language)}</span>
         </div>
       </div>
 

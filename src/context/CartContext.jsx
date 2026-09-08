@@ -8,11 +8,12 @@
 // `order_items` directly — see supabase/functions/create-checkout-session),
 // so a client-side cart is the correct architecture here, not a shortcut.
 //
-// Each cart line is keyed by product id + variant id (when the product has
-// a resolved variant) so the same product in two different color/size
-// combinations is two separate lines. Products without a variant are keyed
-// by product id alone. Quantity is clamped to `maxStock` (the variant's
-// live stock_quantity at add-time) when present.
+// Each cart line is keyed by product id + color + size (+ variant id, when
+// one exists) — see itemKey() below — so the same product in two different
+// color/size combinations is always two separate lines, even when neither
+// combo has a stock-tracked variant row. Products with no color/size at all
+// are keyed by product id alone. Quantity is clamped to `maxStock` (the
+// variant's live stock_quantity at add-time) when present.
 //
 // STAGE 30 FIX — cart isolation between authenticated users.
 // Previously all of this was persisted under a single global localStorage
@@ -69,8 +70,22 @@ function writeStoredCart(key, items) {
   }
 }
 
-function itemKey({ productId, variantId }) {
-  return variantId ? `${productId}:${variantId}` : productId
+// Keyed by every dimension that makes two cart lines actually different —
+// not just variantId, which is null whenever a color+size combo has no
+// stock-tracked variant row (the common case under the unlimited-stock
+// model, see productVariantService.js). Keying on variantId alone made two
+// different colors/sizes of the same variantless product collide into one
+// merged line. colorId/sizeId cover the normal Product page add-to-cart
+// path; colorName/sizeName are the fallback for MyOrderDetailPage's reorder
+// flow, which only has the denormalized order_items display strings, not
+// the live color/size ids.
+function itemKey({ productId, variantId, colorId, colorName, sizeId, sizeName }) {
+  return [
+    productId,
+    colorId ?? colorName ?? '',
+    sizeId ?? sizeName ?? '',
+    variantId ?? '',
+  ].join('|')
 }
 
 export function CartProvider({ children }) {

@@ -8,14 +8,16 @@
 // the footer's links for now rather than pointing to a route that doesn't exist.
 
 import { Link } from 'react-router-dom'
-import { Instagram, Facebook, Linkedin, MessageCircle } from 'lucide-react'
+import { Instagram, Facebook, MessageCircle } from 'lucide-react'
 import { useLanguage } from '../hooks/useLanguage'
 import { getLocalizedName } from '../utils/localizedName'
+import { TikTokIcon, SnapchatIcon } from './icons/BrandIcons'
 
 const SOCIAL_ICONS = {
   instagram: Instagram,
   facebook: Facebook,
-  linkedin: Linkedin,
+  tiktok: TikTokIcon,
+  snapchat: SnapchatIcon,
 }
 
 export default function Footer({ storeSettings, categories }) {

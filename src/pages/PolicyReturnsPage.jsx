@@ -4,6 +4,8 @@
 // pattern as product/category names, see getLocalizedName.js).
 
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { ChevronLeft } from 'lucide-react'
 import { getStoreSettings } from '../services/settingsService'
 import { useLanguage } from '../hooks/useLanguage'
 
@@ -33,6 +35,13 @@ export default function PolicyReturnsPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
+      <nav className="flex items-center gap-1.5 text-xs text-gray-400 mb-6">
+        <Link to="/" className="hover:text-brand-gold transition-colors">
+          {t('nav.home')}
+        </Link>
+        <ChevronLeft size={12} />
+        <span className="text-gray-600">{t('footer.returnsPolicy')}</span>
+      </nav>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('footer.returnsPolicy')}</h1>
       {loading ? (
         <div className="space-y-2">

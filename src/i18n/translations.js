@@ -79,6 +79,7 @@ const translations = {
   'product.loadError': { ar: 'حدث خطأ أثناء تحميل المنتج', en: 'Failed to load the product' },
   'product.color': { ar: 'اللون', en: 'Color' },
   'product.size': { ar: 'المقاس', en: 'Size' },
+  'product.sizeGuide': { ar: 'دليل المقاسات', en: 'Size guide' },
   'product.material': { ar: 'الخامة', en: 'Material' },
   'product.viewImage': { ar: 'عرض هذه الصورة', en: 'View this image' },
   'product.description': { ar: 'الوصف', en: 'Description' },

@@ -20,7 +20,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ImageOff, Minus, Plus, Check, ChevronLeft } from 'lucide-react'
+import { ImageOff, Minus, Plus, Check, ChevronLeft, Ruler, X } from 'lucide-react'
 import NotFoundPage from './NotFoundPage'
 import { useProductPage } from '../hooks/useProducts'
 import { useCart } from '../hooks/useCart'
@@ -30,8 +30,35 @@ import { formatKWD } from '../utils/formatPrice'
 
 const DEFAULT_MAX_QUANTITY = 10
 
+// Static sizing-guide images (public/sizing-guides/) — only kids' categories
+// have a chart to show. Keyed by the category's slug (see categories.slug).
+const SIZE_GUIDE_BY_CATEGORY_SLUG = {
+  awlad: '/sizing-guides/boys.jpeg',
+  banat: '/sizing-guides/girls.jpeg',
+}
+
 function GallerySkeleton() {
   return <div className="aspect-[3/4] rounded-2xl bg-gray-100 animate-pulse" />
+}
+
+function SizeGuideModal({ imageUrl, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl overflow-hidden max-w-md w-full max-h-[85vh] flex flex-col">
+        <button
+          onClick={onClose}
+          className="absolute top-3 left-3 z-10 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center text-gray-600 hover:text-gray-900 transition-colors shadow"
+          aria-label="close"
+        >
+          <X size={16} />
+        </button>
+        <div className="overflow-y-auto">
+          <img src={imageUrl} alt="" className="w-full h-auto" />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function ProductPage() {
@@ -50,6 +77,8 @@ export default function ProductPage() {
   const [activeImageId, setActiveImageId] = useState(null)
   const [quantity, setQuantity] = useState(1)
   const [justAdded, setJustAdded] = useState(false)
+  const [showSizeGuide, setShowSizeGuide] = useState(false)
+  const sizeGuideUrl = product?.category?.slug ? SIZE_GUIDE_BY_CATEGORY_SLUG[product.category.slug] : null
 
   // NOTE: every hook below runs unconditionally on every render (Rules of
   // Hooks) — branching on loading/error/notFound only happens in the JSX
@@ -298,7 +327,7 @@ export default function ProductPage() {
                 <span className="text-sm text-gray-400 line-through">{formatKWD(product.basePrice, language)}</span>
               </>
             ) : (
-              <span className="text-xl font-bold text-gray-900">{formatKWD(unitPrice, language)}</span>
+              <span className="text-xl font-bold text-red-500">{formatKWD(unitPrice, language)}</span>
             )}
           </div>
 
@@ -351,7 +380,19 @@ export default function ProductPage() {
           {/* المقاسات */}
           {hasSizes && (
             <div className="mt-6">
-              <p className="text-sm font-medium text-gray-800 mb-2.5">{t('product.size')}</p>
+              <div className="flex items-center justify-between mb-2.5">
+                <p className="text-sm font-medium text-gray-800">{t('product.size')}</p>
+                {sizeGuideUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSizeGuide(true)}
+                    className="flex items-center gap-1 text-xs text-brand-gold hover:opacity-80 transition-opacity"
+                  >
+                    <Ruler size={13} />
+                    {t('product.sizeGuide')}
+                  </button>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2">
                 {product.sizes.map((size) => {
                   const available = sizeAvailable(size.id)
@@ -424,6 +465,10 @@ export default function ProductPage() {
           </button>
         </div>
       </div>
+
+      {showSizeGuide && sizeGuideUrl && (
+        <SizeGuideModal imageUrl={sizeGuideUrl} onClose={() => setShowSizeGuide(false)} />
+      )}
     </div>
   )
 }
