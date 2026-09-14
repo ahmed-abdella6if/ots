@@ -182,7 +182,6 @@ const translations = {
   'checkout.notesPlaceholder': { ar: 'اي تفاصيل إضافية تساعد في توصيل طلبك', en: 'Any extra details that help deliver your order' },
   'checkout.onlinePayment': { ar: 'الدفع الإلكتروني', en: 'Online payment' },
   'checkout.onlinePaymentMethods': { ar: 'KNET، فيزا/ماستركارد وطرق أخرى عبر MyFatoorah', en: 'KNET, Visa/Mastercard and more via MyFatoorah' },
-  'checkout.onlinePaymentUnavailable': { ar: 'الدفع الإلكتروني متوقف مؤقتا، برجاء استخدام الدفع عند الاستلام', en: 'Online payment is temporarily unavailable — please use cash on delivery' },
   'checkout.discountCode': { ar: 'كود الخصم', en: 'Discount code' },
   'checkout.discountApplied': { ar: 'تم تطبيق الخصم', en: 'Discount applied' },
   'checkout.removeDiscountCode': { ar: 'إزالة كود الخصم', en: 'Remove discount code' },

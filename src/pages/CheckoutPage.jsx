@@ -141,11 +141,10 @@ export default function CheckoutPage() {
   const [discountChecking, setDiscountChecking] = useState(false)
   const [discountError, setDiscountError] = useState('')
 
-  // Online payment (MyFatoorah) is temporarily disabled — cash on delivery
-  // is the only method offered. The online option is still shown, disabled,
-  // with an explanatory note (see checkout.onlinePaymentUnavailable) rather
-  // than removed outright, so re-enabling it later is a one-line change.
-  const paymentMethod = 'cod'
+  // Online payment (MyFatoorah) re-enabled — customer picks between it and
+  // cash on delivery again (previously hardcoded to 'cod' with the online
+  // option shown disabled).
+  const [paymentMethod, setPaymentMethod] = useState('cod')
 
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -354,9 +353,11 @@ export default function CheckoutPage() {
       // exists at this point either way.
       clearCart()
 
-      // Online payment is disabled for now (see paymentMethod above) — every
-      // order goes straight to the success page, cash on delivery.
-      navigate(`/order-success/${order.id}`, { state: { order } })
+      if (paymentMethod === 'online') {
+        navigate(`/order-payment/${order.id}`)
+      } else {
+        navigate(`/order-success/${order.id}`, { state: { order } })
+      }
     } catch (err) {
       console.error('Order creation failed:', err?.message || err)
       if (err?.code === 'INSUFFICIENT_STOCK') {
@@ -613,32 +614,36 @@ export default function CheckoutPage() {
             <h3 className="text-sm font-bold text-gray-900 mb-1">{t('checkout.paymentMethod')}</h3>
 
             <label
-              aria-disabled="true"
-              className="flex items-center gap-3 rounded-xl border px-3 py-2.5 border-gray-200 opacity-50 cursor-not-allowed"
+              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
+                paymentMethod === 'online' ? 'border-brand-gold bg-brand-light/40' : 'border-gray-200 hover:border-gray-300'
+              }`}
             >
               <input
                 type="radio"
                 name="paymentMethod"
                 value="online"
-                checked={false}
-                disabled
-                readOnly
+                checked={paymentMethod === 'online'}
+                onChange={() => setPaymentMethod('online')}
                 className="accent-brand-gold"
               />
               <CreditCard size={18} className="text-gray-500 shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-900">{t('checkout.onlinePayment')}</p>
-                <p className="text-xs text-gray-500">{t('checkout.onlinePaymentUnavailable')}</p>
+                <p className="text-xs text-gray-500">{t('checkout.onlinePaymentMethods')}</p>
               </div>
             </label>
 
-            <label className="flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-default border-brand-gold bg-brand-light/40">
+            <label
+              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
+                paymentMethod === 'cod' ? 'border-brand-gold bg-brand-light/40' : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
               <input
                 type="radio"
                 name="paymentMethod"
                 value="cod"
                 checked={paymentMethod === 'cod'}
-                readOnly
+                onChange={() => setPaymentMethod('cod')}
                 className="accent-brand-gold"
               />
               <Truck size={18} className="text-gray-500 shrink-0" />
