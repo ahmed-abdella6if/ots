@@ -157,7 +157,6 @@ const translations = {
   'checkout.total': { ar: 'الاجمالي', en: 'Total' },
   'checkout.placeOrder': { ar: 'تأكيد الطلب', en: 'Place order' },
   'checkout.freeShipping': { ar: 'مجاني', en: 'Free' },
-  'checkout.cashOnDelivery': { ar: 'الدفع عند الاستلام', en: 'Cash on delivery' },
   'checkout.creatingOrder': { ar: 'جاري إنشاء الطلب...', en: 'Placing your order...' },
   'checkout.continueToPayment': { ar: 'المتابعة للدفع', en: 'Continue to payment' },
   'checkout.moreItemsForFreeShipping': {

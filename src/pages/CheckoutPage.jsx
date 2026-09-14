@@ -27,7 +27,6 @@ import {
   Tag,
   X,
   CheckCircle2,
-  Truck,
   CreditCard,
 } from 'lucide-react'
 import { useCart } from '../hooks/useCart'
@@ -140,11 +139,6 @@ export default function CheckoutPage() {
   const [discount, setDiscount] = useState(null) // { id, code, discountAmount }
   const [discountChecking, setDiscountChecking] = useState(false)
   const [discountError, setDiscountError] = useState('')
-
-  // Online payment (MyFatoorah) re-enabled — customer picks between it and
-  // cash on delivery again (previously hardcoded to 'cod' with the online
-  // option shown disabled).
-  const [paymentMethod, setPaymentMethod] = useState('cod')
 
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -348,16 +342,11 @@ export default function CheckoutPage() {
       })
 
       // Cart is only ever cleared after order creation has actually
-      // succeeded (existing Stage 15 rule, unchanged) — true for both
-      // payment methods, since the order (and its reserved stock) already
-      // exists at this point either way.
+      // succeeded (existing Stage 15 rule, unchanged).
       clearCart()
 
-      if (paymentMethod === 'online') {
-        navigate(`/order-payment/${order.id}`)
-      } else {
-        navigate(`/order-success/${order.id}`, { state: { order } })
-      }
+      // Every order goes to MyFatoorah now — cash on delivery removed.
+      navigate(`/order-payment/${order.id}`)
     } catch (err) {
       console.error('Order creation failed:', err?.message || err)
       if (err?.code === 'INSUFFICIENT_STOCK') {
@@ -609,48 +598,19 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* STAGE 18 — payment method */}
+          {/* Payment method — online (MyFatoorah) only, cash on delivery
+              removed. Shown as a plain info row rather than a radio button
+              since there's nothing left to choose between. */}
           <div className="border-t border-gray-100 pt-4 space-y-2">
             <h3 className="text-sm font-bold text-gray-900 mb-1">{t('checkout.paymentMethod')}</h3>
 
-            <label
-              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
-                paymentMethod === 'online' ? 'border-brand-gold bg-brand-light/40' : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="online"
-                checked={paymentMethod === 'online'}
-                onChange={() => setPaymentMethod('online')}
-                className="accent-brand-gold"
-              />
+            <div className="flex items-center gap-3 rounded-xl border px-3 py-2.5 border-brand-gold bg-brand-light/40">
               <CreditCard size={18} className="text-gray-500 shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-900">{t('checkout.onlinePayment')}</p>
                 <p className="text-xs text-gray-500">{t('checkout.onlinePaymentMethods')}</p>
               </div>
-            </label>
-
-            <label
-              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
-                paymentMethod === 'cod' ? 'border-brand-gold bg-brand-light/40' : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="cod"
-                checked={paymentMethod === 'cod'}
-                onChange={() => setPaymentMethod('cod')}
-                className="accent-brand-gold"
-              />
-              <Truck size={18} className="text-gray-500 shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">{t('checkout.cashOnDelivery')}</p>
-              </div>
-            </label>
+            </div>
           </div>
 
           {/* Totals */}
