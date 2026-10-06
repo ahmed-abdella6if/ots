@@ -19,6 +19,7 @@ import { CheckCircle2, XCircle, Loader2, AlertCircle } from 'lucide-react'
 import { verifyMyFatoorahPayment } from '../services/paymentService'
 import { getOrderForSuccessPage } from '../services/orderService'
 import { useLanguage } from '../hooks/useLanguage'
+import { trackPurchase } from '../utils/metaPixel'
 
 export default function OrderPaymentReturnPage() {
   const { orderId } = useParams()
@@ -48,7 +49,11 @@ export default function OrderPaymentReturnPage() {
         if (result.paid) {
           setStatus('paid')
           getOrderForSuccessPage(orderId)
-            .then((o) => isMounted && setOrder(o))
+            .then((o) => {
+              // Fire even if the component unmounted — the sale happened.
+              if (o) trackPurchase({ orderId, items: o.items || [], value: o.total })
+              if (isMounted) setOrder(o)
+            })
             .catch(() => {})
         } else {
           setStatus('failed')

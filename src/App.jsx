@@ -8,6 +8,7 @@ import AdminLayout from './layouts/AdminLayout'
 import ProtectedAdminRoute from './components/ProtectedAdminRoute'
 import ProtectedCustomerRoute from './components/ProtectedCustomerRoute'
 import ScrollToTop from './components/ScrollToTop'
+import PixelRouteTracker from './components/PixelRouteTracker'
 
 // Customer pages
 import HomePage from './pages/HomePage'
@@ -47,6 +48,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <PixelRouteTracker />
       <Routes>
       {/* Customer site */}
       <Route element={<MainLayout />}>

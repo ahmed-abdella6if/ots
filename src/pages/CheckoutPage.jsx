@@ -18,7 +18,7 @@
 // bundle) to get a PaymentURL and redirect. See src/pages/OrderPaymentPage.jsx
 // and src/services/paymentService.js.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   ShoppingBag,
@@ -37,6 +37,7 @@ import { validateCheckoutFields } from '../utils/validators'
 import { validateCartForCheckout, createOrder, calculateShippingCost, FREE_SHIPPING_MIN_QUANTITY } from '../services/orderService'
 import { validateDiscountCode } from '../services/discountService'
 import { getStoreSettings } from '../services/settingsService'
+import { trackInitiateCheckout } from '../utils/metaPixel'
 
 // STAGE 24 FIX — this was the list of Egyptian governorates on a
 // Kuwait-based store (see src/utils/validators.js for the matching phone
@@ -253,6 +254,15 @@ export default function CheckoutPage() {
     cartItems.length > 0 &&
     badItems.length === 0 &&
     okItems.length > 0
+
+  // Meta Pixel InitiateCheckout — once per visit to this page, as soon as the
+  // validated cart is available.
+  const checkoutTracked = useRef(false)
+  useEffect(() => {
+    if (checkoutTracked.current || okItems.length === 0) return
+    checkoutTracked.current = true
+    trackInitiateCheckout({ items: okItems, value: subtotal })
+  }, [okItems, subtotal])
 
   async function handleApplyDiscount(e) {
     e.preventDefault()

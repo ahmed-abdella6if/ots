@@ -24,6 +24,7 @@ import { ImageOff, Minus, Plus, Check, ChevronLeft, Ruler, X } from 'lucide-reac
 import NotFoundPage from './NotFoundPage'
 import { useProductPage } from '../hooks/useProducts'
 import { useCart } from '../hooks/useCart'
+import { trackViewContent, trackAddToCart } from '../utils/metaPixel'
 import { useLanguage } from '../hooks/useLanguage'
 import { getLocalizedName } from '../utils/localizedName'
 import { formatKWD } from '../utils/formatPrice'
@@ -184,6 +185,17 @@ export default function ProductPage() {
     setQuantity((q) => Math.max(1, Math.min(q, maxQuantity || 1)))
   }, [maxQuantity])
 
+  // Meta Pixel ViewContent — once per product viewed.
+  useEffect(() => {
+    if (!product) return
+    trackViewContent({
+      id: product.id,
+      name: product.name,
+      category: product.category?.name,
+      price: product.hasDiscount && product.discountPrice != null ? product.discountPrice : product.basePrice,
+    })
+  }, [product])
+
   if (notFound) return <NotFoundPage />
 
   if (loading) {
@@ -247,6 +259,8 @@ export default function ProductPage() {
       },
       quantity
     )
+
+    trackAddToCart({ id: product.id, name: product.name, price: unitPrice, quantity })
 
     setJustAdded(true)
     setTimeout(() => setJustAdded(false), 2000)
@@ -358,12 +372,18 @@ export default function ProductPage() {
                       title={color.name}
                       className={`relative w-9 h-9 rounded-full border-2 flex items-center justify-center transition-colors ${
                         selected ? 'border-brand-gold' : 'border-gray-200'
-                      } ${!available ? 'opacity-30 cursor-not-allowed' : ''}`}
+                      } ${!available ? 'opacity-40 cursor-not-allowed' : ''}`}
                     >
                       <span
                         className="w-6 h-6 rounded-full border border-black/10"
                         style={{ backgroundColor: color.hexCode || '#e5e5e5' }}
                       />
+                      {!available && (
+                        <span
+                          className="absolute w-0.5 h-8 bg-gray-500 rotate-45 pointer-events-none"
+                          aria-hidden="true"
+                        />
+                      )}
                       {selected && (
                         <Check
                           size={12}
