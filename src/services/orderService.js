@@ -19,7 +19,7 @@
 
 import { supabase } from '../lib/supabaseClient'
 import { getProductsByIds } from './productService'
-import { getVariantsByIds, getColorsByIds } from './productVariantService'
+import { getVariantsByIds, getColorsByIds, getSizesByIds } from './productVariantService'
 import { getStoreSettings } from './settingsService'
 
 const ORDER_LIST_COLUMNS = 'id, order_number, customer_name, total, payment_status, order_status, created_at'
@@ -310,21 +310,31 @@ export async function validateCartForCheckout(cartItems) {
   // having been marked out of stock since the item was added to the cart.
   const colorIds = [...new Set(cartItems.filter((i) => !i.variantId && i.colorId).map((i) => i.colorId))]
 
-  const [products, variants, colors] = await Promise.all([
+  // A size switched off in the admin blocks every cart line using it, with
+  // or without a variant row.
+  const sizeIds = [...new Set(cartItems.filter((i) => i.sizeId).map((i) => i.sizeId))]
+
+  const [products, variants, colors, sizes] = await Promise.all([
     getProductsByIds(productIds),
     getVariantsByIds(variantIds),
     getColorsByIds(colorIds),
+    getSizesByIds(sizeIds),
   ])
 
   const productMap = new Map(products.map((p) => [p.id, p]))
   const variantMap = new Map(variants.map((v) => [v.id, v]))
   const colorMap = new Map(colors.map((c) => [c.id, c]))
+  const sizeMap = new Map(sizes.map((s) => [s.id, s]))
 
   return cartItems.map((item) => {
     const product = productMap.get(item.productId)
 
     if (!product || !product.isActive) {
       return { key: item.key, ok: false, reason: 'product_unavailable', name: item.name }
+    }
+
+    if (item.sizeId && sizeMap.get(item.sizeId)?.isActive === false) {
+      return { key: item.key, ok: false, reason: 'variant_unavailable', name: product.name }
     }
 
     let unitPrice = product.hasDiscount && product.discountPrice != null ? product.discountPrice : product.basePrice

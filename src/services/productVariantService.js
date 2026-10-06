@@ -104,7 +104,13 @@ export async function createColor(productId, { name, hexCode }) {
     throw error
   }
 
-  return { id: data.id, name: data.name, hexCode: data.hex_code, sortOrder: data.sort_order }
+  return {
+    id: data.id,
+    name: data.name,
+    hexCode: data.hex_code,
+    sortOrder: data.sort_order,
+    isActive: data.is_active ?? true,
+  }
 }
 
 /**
@@ -129,14 +135,52 @@ export async function deleteColor(colorId) {
 export async function getProductSizes(productId) {
   const { data, error } = await supabase
     .from('product_sizes')
-    .select('id, name, sort_order')
+    .select('id, name, sort_order, is_active')
     .eq('product_id', productId)
     .order('sort_order', { ascending: true })
     .order('name', { ascending: true })
 
   if (error) throw error
 
-  return (data || []).map((s) => ({ id: s.id, name: s.name, sortOrder: s.sort_order }))
+  return (data || []).map((s) => ({ id: s.id, name: s.name, sortOrder: s.sort_order, isActive: s.is_active }))
+}
+
+/**
+ * Fetches active-status flags for a set of sizes by id — used by
+ * checkout's validateCartForCheckout to check whether a cart line's size
+ * has since been marked out of stock.
+ * @param {string[]} sizeIds
+ */
+export async function getSizesByIds(sizeIds) {
+  if (!sizeIds || sizeIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('product_sizes')
+    .select('id, is_active')
+    .in('id', sizeIds)
+
+  if (error) throw error
+  return (data || []).map((s) => ({ id: s.id, isActive: s.is_active }))
+}
+
+/**
+ * Toggles a size's active status. Like setColorActive, this applies to the
+ * size across EVERY color at once, without touching any product_variants
+ * rows. See ProductPage.jsx (sizeAvailable) and
+ * orderService.validateCartForCheckout for where this is enforced.
+ * @param {string} sizeId
+ * @param {boolean} isActive
+ */
+export async function setSizeActive(sizeId, isActive) {
+  const { data, error } = await supabase
+    .from('product_sizes')
+    .update({ is_active: isActive })
+    .eq('id', sizeId)
+    .select('id, is_active')
+    .single()
+
+  if (error) throw error
+  return { id: data.id, isActive: data.is_active }
 }
 
 /**
@@ -159,7 +203,7 @@ export async function createSize(productId, { name }) {
     throw error
   }
 
-  return { id: data.id, name: data.name, sortOrder: data.sort_order }
+  return { id: data.id, name: data.name, sortOrder: data.sort_order, isActive: data.is_active ?? true }
 }
 
 /**

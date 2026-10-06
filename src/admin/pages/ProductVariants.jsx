@@ -23,6 +23,7 @@ import {
   createColor,
   deleteColor,
   setColorActive,
+  setSizeActive,
   getProductSizes,
   createSize,
   deleteSize,
@@ -88,6 +89,7 @@ export default function ProductVariants() {
   const [deletingColorIds, setDeletingColorIds] = useState(new Set())
   const [togglingColorIds, setTogglingColorIds] = useState(new Set())
   const [deletingSizeIds, setDeletingSizeIds] = useState(new Set())
+  const [togglingSizeIds, setTogglingSizeIds] = useState(new Set())
   const [busyVariantIds, setBusyVariantIds] = useState(new Set())
   const [stockDrafts, setStockDrafts] = useState({}) // variantId -> string being edited
 
@@ -208,6 +210,22 @@ export default function ProductVariants() {
   // ---------------------------------------------------------------------
   // Sizes
   // ---------------------------------------------------------------------
+
+  // Marks a size out of stock across ALL colors at once (or brings it
+  // back) — same idea as handleToggleColorActive above.
+  async function handleToggleSizeActive(size) {
+    setIdInSet(setTogglingSizeIds, size.id, true)
+    try {
+      const updated = await setSizeActive(size.id, !size.isActive)
+      setSizes((prev) => prev.map((s) => (s.id === size.id ? { ...s, isActive: updated.isActive } : s)))
+    } catch (err) {
+      console.error('Failed to toggle size status:', err.message)
+      setErrorMessage('تعذر تغيير حالة المقاس')
+    } finally {
+      setIdInSet(setTogglingSizeIds, size.id, false)
+    }
+  }
+
   async function handleAddSize(e) {
     e.preventDefault()
     setSizeError('')
@@ -539,12 +557,33 @@ export default function ProductVariants() {
               <ul className="flex flex-wrap gap-2">
                 {sizes.map((size) => {
                   const isDeleting = deletingSizeIds.has(size.id)
+                  const isToggling = togglingSizeIds.has(size.id)
+                  const isOutOfStock = size.isActive === false
                   return (
                     <li
                       key={size.id}
-                      className="flex items-center gap-2 border border-gray-200 rounded-full pr-1.5 pl-3 py-1.5 text-sm"
+                      className={`flex items-center gap-2 border rounded-full pr-1.5 pl-3 py-1.5 text-sm ${
+                        isOutOfStock ? 'border-red-200 bg-red-50/50' : 'border-gray-200'
+                      }`}
                     >
-                      <span className="text-gray-700">{size.name}</span>
+                      <span className={isOutOfStock ? 'text-gray-400 line-through' : 'text-gray-700'}>
+                        {size.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSizeActive(size)}
+                        disabled={isToggling}
+                        title={isOutOfStock ? 'اعادة التفعيل (متوفر)' : 'ايقاف هذا المقاس (غير متوفر بكل الوانه)'}
+                        className="text-gray-400 hover:text-brand-gold disabled:opacity-40 transition-colors"
+                      >
+                        {isToggling ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : isOutOfStock ? (
+                          <ToggleLeft size={16} className="text-red-400" />
+                        ) : (
+                          <ToggleRight size={16} className="text-green-600" />
+                        )}
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteSize(size)}

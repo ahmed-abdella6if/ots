@@ -17,6 +17,7 @@
 // (product.colors[].isActive === false, toggled in the admin Products >
 // Variants page) — that blocks every size under that color, without the
 // admin having to create a zero-stock variant for each size individually.
+// Sizes work the same way (product.sizes[].isActive === false).
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -117,6 +118,8 @@ export default function ProductPage() {
   const comboHasStock = useCallback(
     (colorId, sizeId) => {
       if (!product) return true
+      // A size switched off in the admin is unavailable for every color.
+      if (hasSizes && sizeId && product.sizes.find((s) => s.id === sizeId)?.isActive === false) return false
       const variant = product.variants.find(
         (v) => (!hasColors || v.colorId === colorId) && (!hasSizes || v.sizeId === sizeId)
       )
@@ -233,7 +236,11 @@ export default function ProductPage() {
   // entirely, or there's a specific variant for this combo and its stock is
   // 0. No matching variant at all is NOT out of stock — see the file header
   // note (unlimited by default).
-  const isOutOfStock = selectedColorInactive || (selectedVariant != null && selectedVariant.stockQuantity <= 0)
+  const selectedSizeInactive =
+    hasSizes && !!selectedSizeId && product.sizes.find((s) => s.id === selectedSizeId)?.isActive === false
+
+  const isOutOfStock =
+    selectedColorInactive || selectedSizeInactive || (selectedVariant != null && selectedVariant.stockQuantity <= 0)
 
   const readyToAdd =
     (!needsColor || !!selectedColorId) && (!needsSize || !!selectedSizeId) && !isOutOfStock

@@ -349,7 +349,7 @@ export async function getProductBySlug(slug) {
        category:categories(id, name, name_en, slug),
        images:product_images(id, image_url, color_id, sort_order, is_primary),
        colors:product_colors(id, name, hex_code, sort_order, is_active),
-       sizes:product_sizes(id, name, sort_order),
+       sizes:product_sizes(id, name, sort_order, is_active),
        variants:product_variants(id, color_id, size_id, stock_quantity, price_override, is_active)`
     )
     .eq('slug', slug)
@@ -384,7 +384,7 @@ export async function getProductBySlug(slug) {
       isPrimary: img.is_primary,
     })),
     colors: colors.map((c) => ({ id: c.id, name: c.name, hexCode: c.hex_code, isActive: c.is_active })),
-    sizes: sizes.map((s) => ({ id: s.id, name: s.name })),
+    sizes: sizes.map((s) => ({ id: s.id, name: s.name, isActive: s.is_active })),
     variants: variants.map((v) => ({
       id: v.id,
       colorId: v.color_id,
