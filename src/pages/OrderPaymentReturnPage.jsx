@@ -48,13 +48,16 @@ export default function OrderPaymentReturnPage() {
 
         if (result.paid) {
           setStatus('paid')
+          // Payment is confirmed server-side at this point, so the sale
+          // happened — fire Purchase even if the order can't be read back
+          // (guest orders can't, see metaPixel.js) or the component has
+          // since unmounted. `result.purchase` is the server's own total.
           getOrderForSuccessPage(orderId)
+            .catch(() => null)
             .then((o) => {
-              // Fire even if the component unmounted — the sale happened.
-              if (o) trackPurchase({ orderId, items: o.items || [], value: o.total })
+              trackPurchase({ orderId, verified: result.purchase, order: o })
               if (isMounted) setOrder(o)
             })
-            .catch(() => {})
         } else {
           setStatus('failed')
           setMessage(result.message || t('payment.notCompleted'))

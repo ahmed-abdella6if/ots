@@ -15,6 +15,7 @@ import { CheckCircle2, Loader2, PackageSearch } from 'lucide-react'
 import { getOrderForSuccessPage } from '../services/orderService'
 import { useLanguage } from '../hooks/useLanguage'
 import { formatKWD } from '../utils/formatPrice'
+import { trackPurchase } from '../utils/metaPixel'
 
 export default function OrderSuccessPage() {
   const { id } = useParams()
@@ -37,6 +38,11 @@ export default function OrderSuccessPage() {
         if (!result) {
           setNotFound(true)
         } else {
+          // Reached for an already-paid order (e.g. paid, then the customer
+          // never saw the return page). trackPurchase de-duplicates per
+          // order; the paid check stops a manually typed URL for an unpaid
+          // order from counting as a sale.
+          if (result.paymentStatus === 'paid') trackPurchase({ orderId: result.id, order: result })
           setOrder({
             id: result.id,
             orderNumber: result.orderNumber,

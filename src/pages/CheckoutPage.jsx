@@ -37,7 +37,7 @@ import { validateCheckoutFields } from '../utils/validators'
 import { validateCartForCheckout, createOrder, calculateShippingCost, FREE_SHIPPING_MIN_QUANTITY } from '../services/orderService'
 import { validateDiscountCode } from '../services/discountService'
 import { getStoreSettings } from '../services/settingsService'
-import { trackInitiateCheckout } from '../utils/metaPixel'
+import { trackInitiateCheckout, rememberPendingPurchase } from '../utils/metaPixel'
 
 // STAGE 24 FIX — this was the list of Egyptian governorates on a
 // Kuwait-based store (see src/utils/validators.js for the matching phone
@@ -354,6 +354,10 @@ export default function CheckoutPage() {
       // Cart is only ever cleared after order creation has actually
       // succeeded (existing Stage 15 rule, unchanged).
       clearCart()
+
+      // Keep the order total for the Meta Pixel Purchase event, which fires
+      // on the payment-return page after MyFatoorah confirms payment.
+      rememberPendingPurchase(order)
 
       // Every order goes to MyFatoorah now — cash on delivery removed.
       navigate(`/order-payment/${order.id}`)

@@ -31,6 +31,31 @@ import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { adminClient, getCallerUserId } from '../_shared/supabaseAdmin.ts'
 import { getPaymentDetails } from '../_shared/myfatoorah.ts'
 
+// Trusted order summary returned alongside `paid: true`, read from OUR
+// database here (never from the browser). The storefront uses it as the
+// Meta Pixel Purchase value, so the reported revenue can't be influenced by
+// anything stored client-side. Guests can't read their own orders through
+// RLS, which is why this comes from the service-role client instead.
+async function purchaseSummary(
+  supabase: ReturnType<typeof adminClient>,
+  order: { id: string; total: number | string }
+) {
+  const { data: items } = await supabase
+    .from('order_items')
+    .select('product_id, quantity, unit_price')
+    .eq('order_id', order.id)
+
+  return {
+    total: Number(order.total),
+    currency: 'KWD',
+    items: (items || []).map((i: { product_id: string; quantity: number; unit_price: number | string }) => ({
+      productId: i.product_id,
+      quantity: i.quantity,
+      unitPrice: Number(i.unit_price),
+    })),
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -70,7 +95,7 @@ Deno.serve(async (req: Request) => {
     // Already verified earlier (e.g. the customer refreshed this page, or
     // the async webhook — see myfatoorah-webhook — already confirmed it).
     if (order.payment_status === 'paid') {
-      return jsonResponse({ paid: true, orderStatus: order.order_status })
+      return jsonResponse({ paid: true, orderStatus: order.order_status, purchase: await purchaseSummary(supabase, order) })
     }
 
     let details
@@ -140,7 +165,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: 'server_error', message: 'تم الدفع لكن تعذر تحديث حالة الطلب، سنقوم بمراجعته' }, 500)
     }
 
-    return jsonResponse({ paid: true, orderStatus: order.order_status })
+    return jsonResponse({ paid: true, orderStatus: order.order_status, purchase: await purchaseSummary(supabase, order) })
   } catch (err) {
     console.error('myfatoorah-verify-payment error:', (err as Error).message)
     return jsonResponse({ error: 'server_error', message: 'حدث خطأ غير متوقع' }, 500)
