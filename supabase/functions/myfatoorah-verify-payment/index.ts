@@ -30,6 +30,7 @@
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { adminClient, getCallerUserId } from '../_shared/supabaseAdmin.ts'
 import { getPaymentDetails } from '../_shared/myfatoorah.ts'
+import { notifyNewOrder } from '../_shared/notifyNewOrder.ts'
 
 // Trusted order summary returned alongside `paid: true`, read from OUR
 // database here (never from the browser). The storefront uses it as the
@@ -155,15 +156,23 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    const { error: updateError } = await supabase
+    // `.neq('payment_status','paid')` + select makes this an atomic
+    // "first to flip it" check: if the webhook already marked it paid
+    // between our read above and now, no row comes back and we don't
+    // send a second new-order notification.
+    const { data: flipped, error: updateError } = await supabase
       .from('orders')
       .update({ payment_status: 'paid' })
       .eq('id', order.id)
+      .neq('payment_status', 'paid')
+      .select('id')
 
     if (updateError) {
       console.error('Failed to mark order as paid:', updateError.message)
       return jsonResponse({ error: 'server_error', message: 'تم الدفع لكن تعذر تحديث حالة الطلب، سنقوم بمراجعته' }, 500)
     }
+
+    if (flipped && flipped.length > 0) await notifyNewOrder(order.id)
 
     return jsonResponse({ paid: true, orderStatus: order.order_status, purchase: await purchaseSummary(supabase, order) })
   } catch (err) {

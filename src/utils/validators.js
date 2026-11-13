@@ -23,6 +23,26 @@ export function cleanPhone(phone) {
   return (phone || '').replace(/[\s-]/g, '').replace(/^(\+?965)/, '')
 }
 
+// Earliest birth year accepted for the optional checkout birthday.
+export const MIN_BIRTH_YEAR = 1900
+
+// Local-time YYYY-MM-DD for "today" — what <input type="date" max> expects.
+export function todayISO() {
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+// YYYY-MM-DD, a real calendar date (rejects 2020-02-31), not in the future,
+// not before MIN_BIRTH_YEAR.
+export function isValidBirthday(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [y, m, d] = value.split('-').map(Number)
+  const date = new Date(Date.UTC(y, m - 1, d))
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return false
+  return y >= MIN_BIRTH_YEAR && value <= todayISO()
+}
+
 /**
  * Validates the Stage 15 checkout form fields against the columns that
  * actually exist on `orders` (customer_name, customer_phone, customer_email,
@@ -33,8 +53,13 @@ export function cleanPhone(phone) {
  * @param {{ fullName: string, phone: string, email?: string, address: string, city: string, governorate: string }} fields
  * @returns {Record<string, string>} a map of field -> Arabic error message (empty object = valid)
  */
-export function validateCheckoutFields({ fullName, phone, email, address, city, governorate }) {
+export function validateCheckoutFields({ fullName, phone, email, address, city, governorate, birthday }) {
   const errors = {}
+
+  // Optional — only checked when the customer fills it in.
+  if (birthday && !isValidBirthday(birthday)) {
+    errors.birthday = 'تاريخ الميلاد غير صحيح'
+  }
 
   if (!fullName || !fullName.trim()) {
     errors.fullName = 'الاسم الكامل مطلوب'

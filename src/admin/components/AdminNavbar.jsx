@@ -4,6 +4,7 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Menu, LogOut, UserCircle } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import OrderAlertsButton from './OrderAlertsButton'
 
 const PAGE_TITLES = {
   '/admin': 'الرئيسية',
@@ -46,6 +47,7 @@ export default function AdminNavbar({ onMenuClick }) {
       </div>
 
       <div className="flex items-center gap-3">
+        <OrderAlertsButton />
         <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
           <UserCircle size={20} className="text-gray-400" />
           <span className="truncate max-w-[160px]">

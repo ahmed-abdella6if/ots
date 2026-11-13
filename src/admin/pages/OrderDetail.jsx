@@ -9,6 +9,7 @@ import {
   Mail,
   MapPin,
   StickyNote,
+  Cake,
   Package,
   CreditCard,
   Loader2,
@@ -292,6 +293,12 @@ export default function OrderDetail() {
                 <div className="flex items-center gap-2 text-gray-700">
                   <Mail size={15} className="text-gray-400 shrink-0" />
                   <span dir="ltr">{order.customerEmail}</span>
+                </div>
+              )}
+              {order.customerBirthday && (
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Cake size={15} className="text-gray-400 shrink-0" />
+                  <span dir="ltr">{order.customerBirthday}</span>
                 </div>
               )}
               <div className="flex items-start gap-2 text-gray-700 sm:col-span-2">

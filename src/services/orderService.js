@@ -26,7 +26,7 @@ const ORDER_LIST_COLUMNS = 'id, order_number, customer_name, total, payment_stat
 
 const ORDER_DETAIL_COLUMNS = `
   id, order_number, customer_id,
-  customer_name, customer_phone, customer_email, customer_address, customer_city, customer_governorate, order_notes,
+  customer_name, customer_phone, customer_email, customer_address, customer_city, customer_governorate, order_notes, customer_birthday,
   subtotal, discount_amount, shipping_cost, total,
   payment_status, order_status,
   stripe_checkout_session_id, stripe_payment_intent_id,
@@ -108,6 +108,7 @@ export async function getOrderById(orderId) {
     customerAddress: o.customer_address,
     customerCity: o.customer_city,
     customerGovernorate: o.customer_governorate,
+    customerBirthday: o.customer_birthday,
     orderNotes: o.order_notes,
     subtotal: o.subtotal,
     discountAmount: o.discount_amount,
@@ -548,6 +549,9 @@ export async function createOrder({ customer, customerId, items, discount }) {
     customer_city: customer.city.trim(),
     customer_governorate: customer.governorate.trim(),
     order_notes: customer.notes?.trim() || null,
+    // Optional YYYY-MM-DD (validated at checkout); omitted entirely when
+    // blank so orders without one never touch the column.
+    ...(customer.birthday ? { customer_birthday: customer.birthday } : {}),
     subtotal,
     discount_id: discount?.id || null,
     discount_amount: discountAmount,

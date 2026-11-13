@@ -1,2 +1,7 @@
 # Supabase project config placeholder
 # TODO Stage 2: configure project_id and function settings
+
+# Called only by the payment functions, authenticated by the NOTIFY_SECRET
+# header instead of a JWT (see functions/notify-new-order/index.ts).
+[functions.notify-new-order]
+verify_jwt = false

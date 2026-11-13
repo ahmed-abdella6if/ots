@@ -32,11 +32,15 @@ import { formatKWD } from '../utils/formatPrice'
 
 const DEFAULT_MAX_QUANTITY = 10
 
-// Static sizing-guide images (public/sizing-guides/) — only kids' categories
-// have a chart to show. Keyed by the category's slug (see categories.slug).
+// Static sizing-guide images (public/sizing-guides/), keyed by the
+// category's slug (see categories.slug). Both men's categories (داخلي and
+// ملابس خارجي) share the men's chart.
 const SIZE_GUIDE_BY_CATEGORY_SLUG = {
   awlad: '/sizing-guides/boys.jpeg',
   banat: '/sizing-guides/girls.jpeg',
+  rijali: '/sizing-guides/men.jpeg',
+  'rjaly-mlabs-kharjy': '/sizing-guides/men.jpeg',
+  nisai: '/sizing-guides/women.jpeg',
 }
 
 function GallerySkeleton() {

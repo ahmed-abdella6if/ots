@@ -177,6 +177,10 @@ const translations = {
   'checkout.city': { ar: 'المنطقة', en: 'Area' },
   'checkout.governorate': { ar: 'المحافظة', en: 'Governorate' },
   'checkout.chooseGovernorate': { ar: 'اختر المحافظة', en: 'Choose governorate' },
+  'checkout.birthdayOptional': {
+    ar: 'تاريخ الميلاد (اختياري - خصومات خاصة)',
+    en: 'Date of birth (optional – special discounts)',
+  },
   'checkout.notesOptional': { ar: 'ملاحظات إضافية (اختياري)', en: 'Additional notes (optional)' },
   'checkout.notesPlaceholder': { ar: 'اي تفاصيل إضافية تساعد في توصيل طلبك', en: 'Any extra details that help deliver your order' },
   'checkout.onlinePayment': { ar: 'الدفع الإلكتروني', en: 'Online payment' },

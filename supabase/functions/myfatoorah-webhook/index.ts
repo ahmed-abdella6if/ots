@@ -28,6 +28,7 @@
 import { corsHeaders, jsonResponse } from '../_shared/cors.ts'
 import { adminClient } from '../_shared/supabaseAdmin.ts'
 import { getPaymentDetails } from '../_shared/myfatoorah.ts'
+import { notifyNewOrder } from '../_shared/notifyNewOrder.ts'
 
 // Documented field order for the "TransactionsStatusChanged" event
 // (EventCode 1) per MyFatoorah's webhook signature guidance. VERIFY this
@@ -122,10 +123,16 @@ Deno.serve(async (req: Request) => {
     const isPaid = (details.invoiceStatus || '').toUpperCase() === 'PAID'
 
     if (referenceMatches && amountMatches && currencyMatches && isPaid) {
-      await supabase
+      // Atomic "first to flip it" — the return-page verification may have
+      // marked it paid a moment ago, in which case it already notified.
+      const { data: flipped } = await supabase
         .from('orders')
         .update({ payment_status: 'paid', stripe_payment_intent_id: paymentId })
         .eq('id', order.id)
+        .neq('payment_status', 'paid')
+        .select('id')
+
+      if (flipped && flipped.length > 0) await notifyNewOrder(order.id)
     }
 
     return jsonResponse({ ok: true })

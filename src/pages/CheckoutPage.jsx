@@ -33,7 +33,7 @@ import { useCart } from '../hooks/useCart'
 import { useAuth } from '../hooks/useAuth'
 import { useLanguage } from '../hooks/useLanguage'
 import { formatKWD } from '../utils/formatPrice'
-import { validateCheckoutFields } from '../utils/validators'
+import { validateCheckoutFields, MIN_BIRTH_YEAR, todayISO } from '../utils/validators'
 import { validateCartForCheckout, createOrder, calculateShippingCost, FREE_SHIPPING_MIN_QUANTITY } from '../services/orderService'
 import { validateDiscountCode } from '../services/discountService'
 import { getStoreSettings } from '../services/settingsService'
@@ -134,6 +134,7 @@ export default function CheckoutPage() {
   const [city, setCity] = useState('')
   const [governorate, setGovernorate] = useState('')
   const [notes, setNotes] = useState('')
+  const [birthday, setBirthday] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
 
   const [discountInput, setDiscountInput] = useState('')
@@ -298,7 +299,7 @@ export default function CheckoutPage() {
 
     setSubmitError('')
 
-    const errors = validateCheckoutFields({ fullName, phone, email, address, city, governorate })
+    const errors = validateCheckoutFields({ fullName, phone, email, address, city, governorate, birthday })
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     if (!canSubmit) return
@@ -345,7 +346,7 @@ export default function CheckoutPage() {
       // the current shipping cost from store_settings itself (STAGE 20),
       // the same trust boundary already used for items/discount above.
       const order = await createOrder({
-        customer: { fullName, phone, email, address, city, governorate, notes },
+        customer: { fullName, phone, email, address, city, governorate, notes, birthday },
         customerId: user?.id || null,
         items: freshOk,
         discount: freshDiscount,
@@ -485,6 +486,20 @@ export default function CheckoutPage() {
                   <p className="text-xs text-red-500 mt-1">{fieldErrors.governorate}</p>
                 )}
               </div>
+            </div>
+
+            <div className="sm:w-1/2">
+              <FieldLabel htmlFor="birthday">{t('checkout.birthdayOptional')}</FieldLabel>
+              <TextInput
+                id="birthday"
+                dir="ltr"
+                type="date"
+                min={`${MIN_BIRTH_YEAR}-01-01`}
+                max={todayISO()}
+                value={birthday}
+                onChange={(e) => setBirthday(e.target.value)}
+                error={fieldErrors.birthday}
+              />
             </div>
 
             <div>
