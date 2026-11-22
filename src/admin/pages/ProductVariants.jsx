@@ -18,6 +18,7 @@ import {
   ToggleRight,
 } from 'lucide-react'
 import { getProduct } from '../../services/productService'
+import SizeChartCard from '../components/SizeChartCard'
 import {
   getProductColors,
   createColor,
@@ -628,6 +629,17 @@ export default function ProductVariants() {
             </form>
             {sizeError && <p className="text-xs text-red-500">{sizeError}</p>}
           </div>
+
+          {/* دليل المقاسات */}
+          {product && (
+            <SizeChartCard
+              key={product.id}
+              product={product}
+              onProductChange={setProduct}
+              onSuccess={setSuccessMessage}
+              onError={setErrorMessage}
+            />
+          )}
 
           {/* التوليفات والمخزون */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">

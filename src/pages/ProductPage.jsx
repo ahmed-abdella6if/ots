@@ -84,7 +84,11 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1)
   const [justAdded, setJustAdded] = useState(false)
   const [showSizeGuide, setShowSizeGuide] = useState(false)
-  const sizeGuideUrl = product?.category?.slug ? SIZE_GUIDE_BY_CATEGORY_SLUG[product.category.slug] : null
+  // Per-product chart (admin: Colors & Sizes page) wins over the category
+  // default; the admin can also hide the chart for a product entirely.
+  const sizeGuideUrl = product?.hideSizeChart
+    ? null
+    : product?.sizeChartUrl || (product?.category?.slug ? SIZE_GUIDE_BY_CATEGORY_SLUG[product.category.slug] : null)
 
   // NOTE: every hook below runs unconditionally on every render (Rules of
   // Hooks) — branching on loading/error/notFound only happens in the JSX

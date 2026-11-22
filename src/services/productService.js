@@ -114,7 +114,7 @@ export async function createProduct({ name, nameEn, description, basePrice, cate
 export async function getProduct(productId) {
   const { data, error } = await supabase
     .from('products')
-    .select('id, name, name_en, base_price, is_active')
+    .select('id, name, name_en, base_price, is_active, size_chart_url, hide_size_chart')
     .eq('id', productId)
     .single()
 
@@ -126,7 +126,25 @@ export async function getProduct(productId) {
     nameEn: data.name_en,
     basePrice: data.base_price,
     isActive: data.is_active,
+    sizeChartUrl: data.size_chart_url,
+    hideSizeChart: data.hide_size_chart,
   }
+}
+
+/**
+ * Sets how a product's size chart is shown: a custom image URL, nothing at
+ * all (hideSizeChart), or both cleared to fall back to the category default.
+ * Touches only these two columns.
+ * @param {string} productId
+ * @param {{ sizeChartUrl: string|null, hideSizeChart: boolean }} chart
+ */
+export async function setProductSizeChart(productId, { sizeChartUrl, hideSizeChart }) {
+  const { error } = await supabase
+    .from('products')
+    .update({ size_chart_url: sizeChartUrl || null, hide_size_chart: !!hideSizeChart })
+    .eq('id', productId)
+
+  if (error) throw error
 }
 
 /**
@@ -345,7 +363,7 @@ export async function getProductBySlug(slug) {
     .from('products')
     .select(
       `id, name, name_en, slug, description, material, base_price, has_discount, discount_price,
-       is_bestseller, is_active,
+       is_bestseller, is_active, size_chart_url, hide_size_chart,
        category:categories(id, name, name_en, slug),
        images:product_images(id, image_url, color_id, sort_order, is_primary),
        colors:product_colors(id, name, hex_code, sort_order, is_active),
@@ -374,6 +392,8 @@ export async function getProductBySlug(slug) {
     hasDiscount: data.has_discount,
     discountPrice: data.discount_price,
     isBestseller: data.is_bestseller,
+    sizeChartUrl: data.size_chart_url,
+    hideSizeChart: data.hide_size_chart,
     category: data.category
       ? { id: data.category.id, name: data.category.name, nameEn: data.category.name_en, slug: data.category.slug }
       : null,
